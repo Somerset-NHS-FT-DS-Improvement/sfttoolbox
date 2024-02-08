@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sfttoolbox"
+version = "0"
+authors = [
+    { name="Chris Sampson", email="christopher.sampson@somersetft.nhs.uk" },
+]
+description = "Useful tools for sft data science"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox"
+Issues = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox/issues"
+
+[tool.setuptools.packages.find]
+exclude = ["notebooks"]
