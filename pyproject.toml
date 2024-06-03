@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sfttoolbox"
-version = "0"
+version = "0.1.0"
 authors = [
     { name="Chris Sampson", email="christopher.sampson@somersetft.nhs.uk" },
 ]
@@ -21,4 +21,5 @@ Homepage = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox"
 Issues = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox/issues"
 
 [tool.setuptools.packages.find]
+where = ["."]
 exclude = ["notebooks"]
