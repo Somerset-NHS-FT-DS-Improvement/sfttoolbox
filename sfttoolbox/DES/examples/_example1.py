@@ -15,15 +15,17 @@ Dependencies:
 This example helps to illustrate the basic setup and execution of a simulation without capacity constraints, focusing
 on probabilistic patient movement through the system.
 """
-import sfttoolbox
+from sfttoolbox import sfttoolbox
 from dataclasses import dataclass, field
 import networkx as nx
 import numpy as np
+
 
 # This allows a standard distribution call to take in the patient object (and does nothing with it)
 @sfttoolbox.DES.distribution_wrapper
 def uniform():
     return np.random.uniform()
+
 
 # Create a simple graph
 G = nx.DiGraph()
