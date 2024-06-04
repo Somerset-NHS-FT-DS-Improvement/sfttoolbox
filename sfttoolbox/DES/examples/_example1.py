@@ -1,11 +1,19 @@
 """
 Simulation Example 1
 
-A simple graph that uses probability to determine the patient movement, but doesn't require any capacity information.
+This example demonstrates a simple simulation using a directed graph where patient movement is determined by
+probabilities. This example does not take node capacity into account.
 
-This file can be run by simply typing
-python _example1.py
-from the folder it's contained within.
+To run this example, use the following command in the terminal:
+    python _example1.py
+
+Make sure you have the necessary dependencies installed, including the `networkx` library.
+
+Dependencies:
+    - networkx
+
+This example helps to illustrate the basic setup and execution of a simulation without capacity constraints, focusing
+on probabilistic patient movement through the system.
 """
 import sfttoolbox
 from dataclasses import dataclass, field

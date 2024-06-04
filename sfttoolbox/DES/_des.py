@@ -12,15 +12,19 @@ Classes:
     - PatientGeneratorInterface: An interface for generating new patients at each step of the simulation.
 
 Usage:
-    1. Define a directed graph (`nx.DiGraph`) with nodes representing different stages or units in the system.
+    1. Import necessary libraries:
+       ```
+       import networkx as nx
+       ```
+    2. Define a directed graph (`nx.DiGraph`) with nodes representing different stages or units in the system.
        Each node can have attributes like 'capacity' and 'resource'.
-    2. Implement a patient generator class that adheres to the `PatientGeneratorInterface`.
-    3. Initialize the `Simulation` class with the graph and the patient generator.
-    4. Run the simulation using the `run_simulation` method.
+    3. Implement a patient generator class that adheres to the `PatientGeneratorInterface`.
+    4. Initialize the `Simulation` class with the graph and the patient generator.
+    5. Run the simulation using the `run_simulation` method.
 
-For examples, see files titled "_exampleX.py"
+For examples, see files titled "_exampleX.py" in the examples directory.
 
-This module is designed to be flexible and extensible, allowing users to customise the graph structure, patient
+This module is designed to be flexible and extensible, allowing users to customize the graph structure, patient
 attributes, and generation logic according to their specific needs.
 """
 __all__ = ["Simulation", "distribution_wrapper"]
@@ -61,13 +65,15 @@ class PatientGeneratorInterface(Protocol):
 
 
 class CapacityInterface(Protocol):
-    def get(self, resource: Any, patient: PatientInterface) -> bool:
+    def get(self, resource: Any, patient: PatientInterface, day_num: int, day: str) -> bool:
         """
         Check if the capacity allows the resource allocation for the given patient.
 
         Args:
             resource (Any): The resource to check against capacity.
             patient (PatientInterface): The patient for whom the resource allocation is checked.
+            day_num (int): The day number of the simulation.
+            day (str): The day of the week.
 
         Returns:
             bool: True if the capacity allows resource allocation, False otherwise.
@@ -85,6 +91,7 @@ class CapacityInterface(Protocol):
             List[Any]: List of patients to be moved on the current day.
         """
 
+
 def distribution_wrapper(func: callable) -> callable:
     """
     A decorator that wraps a distribution function to allow it fit the interface in Simulation.
@@ -95,9 +102,11 @@ def distribution_wrapper(func: callable) -> callable:
     Returns:
         callable: The wrapped function.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func()
+
     return wrapper
 
 
@@ -121,6 +130,9 @@ class Simulation:
 
         self.discharged_patients = []
         self.days_of_week = cycle(["Mon", "Tues", "Weds", "Thurs", "Fri", "Sat", "Sun"])
+
+        self.day_num = None
+        self.day = None
 
     def check_graph(self) -> True:
         """
@@ -162,7 +174,6 @@ class Simulation:
         """
         return nx.get_node_attributes(self.graph, "capacity")
 
-
     def run_simulation(self) -> None:
         """
         Run the simulation for the specified number of days.
@@ -172,6 +183,8 @@ class Simulation:
         # TODO: run each patient down the graph until assigned a capacity or discharged
 
         for day_num, day in zip(range(0, self.final_day_num, 1), self.days_of_week):
+            self.day_num = day_num
+            self.day = day
             print(day_num, day)
 
             patients_to_move = {node: capacity.update_day(day_num, day) for node, capacity in self.capacities.items()}
@@ -197,8 +210,8 @@ class Simulation:
                 if discharged_patient:
                     self.discharged_patients.append(discharged_patient)
 
-
-    def traverse_graph(self, node: Any, patient: PatientInterface, check_capacity: bool = True) -> Optional[PatientInterface]:
+    def traverse_graph(self, node: Any, patient: PatientInterface, check_capacity: bool = True) -> Optional[
+        PatientInterface]:
         """
         Traverse the graph for a given patient starting from a specified node.
 
@@ -210,7 +223,6 @@ class Simulation:
         Returns:
             Optional[Patient]: The patient if they are discharged, otherwise None.
         """
-
         node_attrs = self.graph.nodes[node]
         next_nodes, edge_attrs = [*zip(*self.graph[node].items())]
 
@@ -218,7 +230,7 @@ class Simulation:
         if check_capacity and capacity:
             resource = node_attrs["resource"]
 
-            if not capacity.get(resource = resource, patient = patient):
+            if not capacity.get(resource=resource, patient=patient, day_num=self.day_num, day=self.day):
 
                 for edge_index, edge_attr in enumerate(edge_attrs):
                     if "capacity" in edge_attr:
@@ -226,7 +238,6 @@ class Simulation:
                 next_node = next_nodes[edge_index]
             else:
                 return
-
 
         else:
 
@@ -245,11 +256,13 @@ class Simulation:
                     bernoulli = [edge_attr.get("bernoulli") for edge_attr in edge_attrs]
 
                     if any(bernoulli):
-                        assert len(bernoulli) == 2, f"When using Bernoulli, there should only be 2 options, check node {node}"
+                        assert len(
+                            bernoulli) == 2, f"When using Bernoulli, there should only be 2 options, check node {node}"
                         next_node = next_nodes[0] if bernoulli[0] == prob else next_nodes[1]
 
                     else:
-                        raise ValueError(f"Probabilities of pathway must add up to 1 or contain a Bernoulli trial, check node {node}")
+                        raise ValueError(
+                            f"Probabilities of pathway must add up to 1 or contain a Bernoulli trial, check node {node}")
 
                 else:
                     next_node = next_nodes[np.searchsorted(traverse_probs, prob)]
@@ -270,7 +283,7 @@ class Simulation:
         Args:
             filename (str): The name of the file where the graph visualization will be saved.
         """
-        node_numbers = {v:k for k,v in dict(enumerate(self.graph.nodes)).items()}
+        node_numbers = {v: k for k, v in dict(enumerate(self.graph.nodes)).items()}
 
         graph_string = "\n".join([self.__format_edge(edge, node_numbers) for edge in self.graph.edges(data=True)])
 
@@ -298,7 +311,6 @@ class Simulation:
 
         with open(filename, 'w') as fout:
             fout.write(html_string)
-
 
     def __format_node(self, node_name: str, attributes: Dict[str, Any]) -> str:
         """
@@ -336,4 +348,3 @@ class Simulation:
             prop_string = "|" + "\n".join([f"{k}: {v}" for k, v in props.items()]) + "|"
 
         return f"{node_numbers[src]}[{self.__format_node(src, self.graph.nodes[src])}] -->{prop_string} {node_numbers[tgt]}[{self.__format_node(tgt, self.graph.nodes[tgt])}]"
-
