@@ -1,4 +1,4 @@
-from sfttoolbox import graphing, plotting, DES
+from . import graphing, plotting, DES
 
 
 team_colours = {
