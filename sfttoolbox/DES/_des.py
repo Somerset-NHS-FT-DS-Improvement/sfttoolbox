@@ -131,7 +131,7 @@ class Simulation:
         self.capacities = self.collect_capacities()
 
         self.discharged_patients = []
-        self.days_of_week = cycle(["Mon", "Tues", "Weds", "Thurs", "Fri", "Sat", "Sun"])
+        self.days_of_week = cycle(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
 
         self.day_num = None
         self.day = None
