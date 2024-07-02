@@ -225,7 +225,13 @@ class Simulation:
             Optional[Patient]: The patient if they are discharged, otherwise None.
         """
         node_attrs = self.graph.nodes[node]
-        next_nodes, edge_attrs = [*zip(*self.graph[node].items())]
+        next_nodes_and_edge_attrs = [*zip(*self.graph[node].items())]
+
+        # Pathway required for terminal capacity node
+        if next_nodes_and_edge_attrs:
+            next_nodes, edge_attrs = next_nodes_and_edge_attrs
+        else:
+            next_nodes, edge_attrs = [], dict()
 
         capacity = node_attrs.get("capacity")
         if check_capacity and capacity:
@@ -246,6 +252,9 @@ class Simulation:
 
             if len(next_nodes) == 1:
                 next_node = next_nodes[0]
+            elif len(next_nodes) == 0:
+                # Final node reached - pathway for terminal nodes with capacity
+                return patient
             else:
 
                 prob = node_attrs.get("distribution")(patient)
@@ -270,7 +279,7 @@ class Simulation:
 
         logger.info(f"Moving to next node: {next_node}")
 
-        if self.graph.out_degree[next_node] > 0:
+        if self.graph.out_degree[next_node] > 0 or next_node in self.capacities:
             return self.traverse_graph(next_node, patient)
         else:
             # Final node reached
