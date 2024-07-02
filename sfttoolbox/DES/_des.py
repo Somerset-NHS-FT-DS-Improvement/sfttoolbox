@@ -270,7 +270,7 @@ class Simulation:
 
         logger.info(f"Moving to next node: {next_node}")
 
-        if self.graph.out_degree[next_node] > 0 and next_node not in self.capacities.keys():
+        if self.graph.out_degree[next_node] > 0:
             return self.traverse_graph(next_node, patient)
         else:
             # Final node reached
