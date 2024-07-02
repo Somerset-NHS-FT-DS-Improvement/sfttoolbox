@@ -15,7 +15,7 @@ Dependencies:
 This example helps to illustrate the basic setup and execution of a simulation without capacity constraints, focusing
 on probabilistic patient movement through the system.
 """
-from sfttoolbox import sfttoolbox
+import sfttoolbox
 from dataclasses import dataclass, field
 import networkx as nx
 import numpy as np
@@ -96,3 +96,4 @@ if __name__ == '__main__':
 
     # Use our convenient sankey generator to view the flow
     sfttoolbox.plotting.generate_sankey(G2)
+#%%

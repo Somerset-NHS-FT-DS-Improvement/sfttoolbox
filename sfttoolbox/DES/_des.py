@@ -35,7 +35,9 @@ import networkx as nx
 from typing import List, Dict, Any, Optional
 from itertools import cycle
 import numpy as np
+import logging
 
+logger = logging.getLogger(__name__)
 
 class PatientInterface(Protocol):
     def __init__(self, id: int) -> None:
@@ -185,15 +187,14 @@ class Simulation:
         for day_num, day in zip(range(0, self.final_day_num, 1), self.days_of_week):
             self.day_num = day_num
             self.day = day
-            print(day_num, day)
+            logger.info(f"day number: {day_num}, day: {day}")
 
             patients_to_move = {node: capacity.update_day(day_num, day) for node, capacity in self.capacities.items()}
             if any(patients_to_move.values()):
-                print(patients_to_move)
                 # TODO: use itertools here
                 for node, patients in patients_to_move.items():
                     for patient in patients:
-                        print(f"OLD PATIENT: patient {patient.id}")
+                        logger.info(f"Moving previous patient: patient {patient.id}")
 
                         discharged_patient = self.traverse_graph(node, patient, check_capacity=False)
                         # TODO: abstract this out
@@ -204,7 +205,7 @@ class Simulation:
 
             node = self.start_node
             for patient in new_patients:
-                print(f"NEW PATIENT: patient {patient.id}")
+                logger.info(f"New patient generated: patient {patient.id}")
 
                 discharged_patient = self.traverse_graph(node, patient)
                 if discharged_patient:
@@ -267,7 +268,7 @@ class Simulation:
                 else:
                     next_node = next_nodes[np.searchsorted(traverse_probs, prob)]
 
-        print(next_node)
+        logger.info(f"Moving to next node: {next_node}")
 
         if self.graph.out_degree[next_node] > 0:
             return self.traverse_graph(next_node, patient)
