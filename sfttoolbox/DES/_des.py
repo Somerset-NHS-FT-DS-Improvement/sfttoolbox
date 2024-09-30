@@ -113,7 +113,7 @@ def distribution_wrapper(func: callable) -> callable:
 
 
 class Simulation:
-    def __init__(self, graph: nx.DiGraph, patient_generator: PatientGeneratorInterface, number_of_days: int):
+    def __init__(self, graph: nx.DiGraph, patient_generator: PatientGeneratorInterface, number_of_days: int, start_day: str = "Mon"):
         """
         Initialize the simulation with a directed graph and a patient generator.
 
@@ -131,7 +131,11 @@ class Simulation:
         self.capacities = self.collect_capacities()
 
         self.discharged_patients = []
-        self.days_of_week = cycle(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+
+        days_of_the_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        start_index = days_of_the_week.index(start_day)
+        days_of_the_week = days_of_the_week[start_index:] + days_of_the_week[:start_index]
+        self.days_of_week = cycle(days_of_the_week)
 
         self.day_num = None
         self.day = None
