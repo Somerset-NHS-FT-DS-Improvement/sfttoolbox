@@ -202,7 +202,7 @@ class Simulation:
 
                         discharged_patient = self.traverse_graph(node, patient, check_capacity=False)
                         # TODO: abstract this out
-                        if discharged_patient:
+                        if discharged_patient is not None:
                             self.discharged_patients.append(discharged_patient)
 
             new_patients = self.patient_generator.generate_patients(day_num, day)
