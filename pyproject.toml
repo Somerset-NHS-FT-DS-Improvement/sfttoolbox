@@ -15,6 +15,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "plotly"
+]
 
 [project.urls]
 Homepage = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox"
@@ -23,6 +26,3 @@ Issues = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["notebooks"]
-
-[project.dependencies]
-plotly = ">=5.0.0"
