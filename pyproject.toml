@@ -23,3 +23,6 @@ Issues = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["notebooks"]
+
+[project.dependencies]
+plotly = ">=5.0.0"
