@@ -6,7 +6,7 @@ Welcome to the SFT Data Science Toolkit! This toolkit is designed to empower dat
 
 If trying to install this package locally (i.e. using DataSpell), open up a terminal and type:
 
-`pip install -e  "S:\Data Science\sandboxes\chris\Toolbox\sfttoolbox"`
+`pip install -e  "PATH\TO\FOLDER"`
 
 If this is successful, it's then as simple as using:
 
