@@ -1,6 +1,5 @@
 from . import graphing, plotting, DES
 
-
 team_colours = {
     'red': {'hex': '#d1495b', 'rgb': 'RGB(209, 73, 91)'},
     'green': {'hex': '#66a182', 'rgb': 'RGB(102, 161, 130)'},
