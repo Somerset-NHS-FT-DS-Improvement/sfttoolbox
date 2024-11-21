@@ -57,6 +57,7 @@ def generate_sankey(G: nx.Graph) -> None:
             thickness = 10,
             line = dict(color = "black", width = 0.5),
             label = [f"{node}" for node in G.nodes],
+            align = "left",
             color = list(nx.get_node_attributes(G, "color").values())
         ),
         link = dict(
