@@ -2,6 +2,7 @@ __all__ = ["generate_sankey"]
 
 import networkx as nx
 import plotly.graph_objects as go
+from pyvis.network import Network
 
 
 def generate_sankey(G: nx.Graph) -> None:
@@ -49,23 +50,76 @@ def generate_sankey(G: nx.Graph) -> None:
     sources, targets = [*zip(*G.edges)]
     nodes = list(G.nodes)
 
-    get_node_indices = lambda node_list : [idx for node in node_list for idx, val in enumerate(nodes) if val == node]
+    get_node_indices = lambda node_list: [
+        idx for node in node_list for idx, val in enumerate(nodes) if val == node
+    ]
 
-    fig = go.Figure(data=[go.Sankey(
-        node = dict(
-            pad = 15,
-            thickness = 10,
-            line = dict(color = "black", width = 0.5),
-            label = [f"{node}" for node in G.nodes],
-            align = "left",
-            color = list(nx.get_node_attributes(G, "color").values())
-        ),
-        link = dict(
-            source = get_node_indices(sources),
-            target = get_node_indices(targets),
-            value = list(nx.get_edge_attributes(G, "value").values()),
-            color = list(nx.get_edge_attributes(G, "color").values())
-        )
-    )])
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=10,
+                    line=dict(color="black", width=0.5),
+                    label=[f"{node}" for node in G.nodes],
+                    align = "left",
+                    color=list(nx.get_node_attributes(G, "color").values()),
+                ),
+                link=dict(
+                    source=get_node_indices(sources),
+                    target=get_node_indices(targets),
+                    value=list(nx.get_edge_attributes(G, "value").values()),
+                    color=list(nx.get_edge_attributes(G, "color").values()),
+                ),
+            )
+        ]
+    )
 
     fig.show()
+
+
+def visualise_network(
+    G: nx.Graph, filename: str = None, show_physics: bool = False, **kwargs
+) -> Network:
+    """
+    Visualize a NetworkX graph using pyvis.
+
+    Parameters:
+    G (nx.Graph): The NetworkX graph to visualize.
+    filename (str, optional): The name of the file to save the visualization. If None, the visualization is not saved. Defaults to None.
+    show_physics (bool, optional): Whether to show physics controls in the visualization. Defaults to False.
+    **kwargs: Additional keyword arguments to pass to the pyvis Network.
+
+    Returns:
+    Network: The pyvis Network object.
+
+    Example:
+    --------
+    ```python
+    import networkx as nx
+
+    G = nx.DiGraph()
+
+    # Add nodes with color attributes
+    G.add_node("A", color="blue")
+    G.add_node("B", color="green")
+    G.add_node("C", color="red")
+
+    # Add edges with value and color attributes
+    G.add_edge("A", "B", value=10, color="yellow")
+    G.add_edge("B", "C", value=5, color="purple")
+
+    visualise_network(G, filename="test.html", show_physics=True)
+    ```
+    """
+    nt = Network(**kwargs)
+
+    nt.from_nx(G)
+
+    if show_physics:
+        nt.show_buttons(filter_=["physics"])
+
+    if filename is not None:
+        nt.save_graph(filename)
+
+    return nt
