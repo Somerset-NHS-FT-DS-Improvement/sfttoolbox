@@ -2,7 +2,7 @@ __all__ = ["generate_sankey"]
 
 import networkx as nx
 import plotly.graph_objects as go
-from pyvis import Network
+from pyvis.network import Network
 
 
 def generate_sankey(G: nx.Graph) -> None:
