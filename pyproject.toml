@@ -7,6 +7,7 @@ name = "sfttoolbox"
 version = "0.1.0"
 authors = [
     { name="Chris Sampson", email="christopher.sampson@somersetft.nhs.uk" },
+    { name="Sam Vautier", email="samantha.vautier@somersetft.nhs.uk" }
 ]
 description = "Useful tools for sft data science"
 readme = "README.md"
@@ -16,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "plotly",
+    "plotly>=5.19",
     "pyvis"
 ]
 
