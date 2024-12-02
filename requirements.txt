@@ -2,4 +2,5 @@ networkx
 numpy
 plotly >=5.19
 pyvis
-
+black
+isort

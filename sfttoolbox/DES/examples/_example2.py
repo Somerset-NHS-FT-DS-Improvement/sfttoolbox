@@ -43,9 +43,17 @@ class AppointmentDuration:
 
 # a capacity object must include a "get" method that takes the resource and patient objects
 # and an update_day method.
-class StaffCapacity():
+class StaffCapacity:
     def __init__(self):
-        self.weekly_capacity = {"Mon": 2, "Tues": 2, "Weds": 2, "Thurs": 2, "Fri": 0, "Sat": 0, "Sun": 0}
+        self.weekly_capacity = {
+            "Mon": 2,
+            "Tues": 2,
+            "Weds": 2,
+            "Thurs": 2,
+            "Fri": 0,
+            "Sat": 0,
+            "Sun": 0,
+        }
         self.current_weekly_capacity = self.weekly_capacity.copy()
         self.waiting_list = []
         self.treatment_list = []
@@ -96,17 +104,18 @@ G = nx.DiGraph()
 G.add_edges_from(
     [
         ("Patient arrives", "Patient triaged"),
-
         ("Patient triaged", "Patient discharged", {"probability": 0.2}),
         ("Patient triaged", "Appointment made", {"probability": 0.8}),
-
-        ("Appointment made", "Patient Treated")
+        ("Appointment made", "Patient Treated"),
     ]
 )
 G.add_nodes_from(
     [
         ("Patient triaged", {"distribution": uniform}),
-        ("Appointment made", {"capacity": staff_capacity, "resource": AppointmentDuration(1)})
+        (
+            "Appointment made",
+            {"capacity": staff_capacity, "resource": AppointmentDuration(1)},
+        ),
     ]
 )
 
@@ -133,7 +142,7 @@ class PatientGenerator:
         return patients
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     patient_generator = PatientGenerator()
 
     simulation_days = 10
@@ -145,6 +154,14 @@ if __name__ == '__main__':
 
     # Because we stored the wait times in the capacity object, we can now retrieve them and look at some metrics!
     number_of_patients_waiting = len(staff_capacity.wait_times)
-    mean_length_of_wait = np.mean([patient["off"] - patient["on"] for patient in staff_capacity.wait_times.values() if patient.get("off")])
+    mean_length_of_wait = np.mean(
+        [
+            patient["off"] - patient["on"]
+            for patient in staff_capacity.wait_times.values()
+            if patient.get("off")
+        ]
+    )
 
-    print(f"{number_of_patients_waiting} patients waited an average of {mean_length_of_wait :.2f} days")
+    print(
+        f"{number_of_patients_waiting} patients waited an average of {mean_length_of_wait :.2f} days"
+    )

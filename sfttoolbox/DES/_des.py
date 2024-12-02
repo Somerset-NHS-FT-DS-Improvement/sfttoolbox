@@ -39,6 +39,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class PatientInterface(Protocol):
     def __init__(self, id: int) -> None:
         """
@@ -67,7 +68,9 @@ class PatientGeneratorInterface(Protocol):
 
 
 class CapacityInterface(Protocol):
-    def get(self, resource: Any, patient: PatientInterface, day_num: int, day: str) -> bool:
+    def get(
+        self, resource: Any, patient: PatientInterface, day_num: int, day: str
+    ) -> bool:
         """
         Check if the capacity allows the resource allocation for the given patient.
 
@@ -113,7 +116,13 @@ def distribution_wrapper(func: callable) -> callable:
 
 
 class Simulation:
-    def __init__(self, graph: nx.DiGraph, patient_generator: PatientGeneratorInterface, number_of_days: int, start_day: str = "Mon"):
+    def __init__(
+        self,
+        graph: nx.DiGraph,
+        patient_generator: PatientGeneratorInterface,
+        number_of_days: int,
+        start_day: str = "Mon",
+    ):
         """
         Initialize the simulation with a directed graph and a patient generator.
 
@@ -134,7 +143,9 @@ class Simulation:
 
         days_of_the_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         start_index = days_of_the_week.index(start_day)
-        days_of_the_week = days_of_the_week[start_index:] + days_of_the_week[:start_index]
+        days_of_the_week = (
+            days_of_the_week[start_index:] + days_of_the_week[:start_index]
+        )
         self.days_of_week = cycle(days_of_the_week)
 
         self.day_num = None
@@ -193,14 +204,19 @@ class Simulation:
             self.day = day
             logger.info(f"day number: {day_num}, day: {day}")
 
-            patients_to_move = {node: capacity.update_day(day_num, day) for node, capacity in self.capacities.items()}
+            patients_to_move = {
+                node: capacity.update_day(day_num, day)
+                for node, capacity in self.capacities.items()
+            }
             if any(patients_to_move.values()):
                 # TODO: use itertools here
                 for node, patients in patients_to_move.items():
                     for patient in patients:
                         logger.info(f"Moving previous patient: patient {patient.id}")
 
-                        discharged_patient = self.traverse_graph(node, patient, check_capacity=False)
+                        discharged_patient = self.traverse_graph(
+                            node, patient, check_capacity=False
+                        )
                         # TODO: abstract this out
                         if discharged_patient is not None:
                             self.discharged_patients.append(discharged_patient)
@@ -215,8 +231,9 @@ class Simulation:
                 if discharged_patient:
                     self.discharged_patients.append(discharged_patient)
 
-    def traverse_graph(self, node: Any, patient: PatientInterface, check_capacity: bool = True) -> Optional[
-        PatientInterface]:
+    def traverse_graph(
+        self, node: Any, patient: PatientInterface, check_capacity: bool = True
+    ) -> Optional[PatientInterface]:
         """
         Traverse the graph for a given patient starting from a specified node.
 
@@ -241,8 +258,9 @@ class Simulation:
         if check_capacity and capacity:
             resource = node_attrs["resource"]
 
-            if not capacity.get(resource=resource, patient=patient, day_num=self.day_num, day=self.day):
-
+            if not capacity.get(
+                resource=resource, patient=patient, day_num=self.day_num, day=self.day
+            ):
                 for edge_index, edge_attr in enumerate(edge_attrs):
                     if "capacity" in edge_attr:
                         break
@@ -251,7 +269,6 @@ class Simulation:
                 return
 
         else:
-
             patient.pathway.append(node)
 
             if len(next_nodes) == 1:
@@ -260,23 +277,27 @@ class Simulation:
                 # Final node reached - pathway for terminal nodes with capacity
                 return patient
             else:
-
                 prob = node_attrs.get("distribution")(patient)
 
-                traverse_probs = np.cumsum([edge_attr.get("probability", 0) for edge_attr in edge_attrs])
+                traverse_probs = np.cumsum(
+                    [edge_attr.get("probability", 0) for edge_attr in edge_attrs]
+                )
 
                 if traverse_probs[-1] != 1:
-
                     bernoulli = [edge_attr.get("bernoulli") for edge_attr in edge_attrs]
 
                     if any(bernoulli):
-                        assert len(
-                            bernoulli) == 2, f"When using Bernoulli, there should only be 2 options, check node {node}"
-                        next_node = next_nodes[0] if bernoulli[0] == prob else next_nodes[1]
+                        assert (
+                            len(bernoulli) == 2
+                        ), f"When using Bernoulli, there should only be 2 options, check node {node}"
+                        next_node = (
+                            next_nodes[0] if bernoulli[0] == prob else next_nodes[1]
+                        )
 
                     else:
                         raise ValueError(
-                            f"Probabilities of pathway must add up to 1 or contain a Bernoulli trial, check node {node}")
+                            f"Probabilities of pathway must add up to 1 or contain a Bernoulli trial, check node {node}"
+                        )
 
                 else:
                     next_node = next_nodes[np.searchsorted(traverse_probs, prob)]
@@ -299,7 +320,12 @@ class Simulation:
         """
         node_numbers = {v: k for k, v in dict(enumerate(self.graph.nodes)).items()}
 
-        graph_string = "\n".join([self.__format_edge(edge, node_numbers) for edge in self.graph.edges(data=True)])
+        graph_string = "\n".join(
+            [
+                self.__format_edge(edge, node_numbers)
+                for edge in self.graph.edges(data=True)
+            ]
+        )
 
         html_string = f"""
         <html>
@@ -323,7 +349,7 @@ class Simulation:
         </html>
         """
 
-        with open(filename, 'w') as fout:
+        with open(filename, "w") as fout:
             fout.write(html_string)
 
     def __format_node(self, node_name: str, attributes: Dict[str, Any]) -> str:
