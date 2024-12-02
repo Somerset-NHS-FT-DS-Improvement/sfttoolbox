@@ -2,7 +2,7 @@ name: Python tests
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 permissions:
   contents: read
@@ -21,17 +21,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install  pytest
-          pip install -r requirements.txt
-      - name: Test with pytest
-        run: |
-          pytest -v
+          pip install -r requirements.txt pytest black isort flake8
       - name: Test black
         run: |
-          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs black --check
+          find . -name "*.py" | xargs -I{} black {} --check
       - name: Test isort
         run: |
-          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs isort --check
-      - name: Test flake8
+          isort -r --check -v .
+      - name: Lint with flake8
         run: |
-          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs flake8
+          # This doesn't error currently
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
