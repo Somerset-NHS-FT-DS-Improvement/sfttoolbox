@@ -22,9 +22,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Debug sfttoolbox
+        run: |
+          python -c "import sfttoolbox; print(dir(sfttoolbox))"
       - name: Test with pytest
         run: |
-          pwd;
           pytest -v
       - name: Test black
         run: |
