@@ -4,3 +4,4 @@ plotly >=5.19
 pyvis
 black
 isort
+pytest == 7.4.0
