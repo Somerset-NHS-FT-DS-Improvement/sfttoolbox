@@ -24,10 +24,13 @@ jobs:
           pip install -r requirements.txt pytest black isort flake8
       - name: Test black
         run: |
-          git diff --name-only | grep '\.py'$ | xargs -I{} black {} --check
+          find . -name "*.py" | xargs -I{} black {} --check
       - name: Test isort
         run: |
-          git diff --name-only | grep '\.py'$ | xargs -I{} isort --check {}
+          isort -r --check -v .
       - name: Test flake8
         run: |
-          git diff --name-only | grep '\.py'$ | xargs -I{} flake8 {}
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
