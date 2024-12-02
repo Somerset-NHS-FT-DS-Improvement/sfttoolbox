@@ -20,10 +20,12 @@ This example illustrates how to set up and execute a simulation that incorporate
 and capacity constraints based on staff availability. It provides a more realistic scenario by considering resource
 limitations in the healthcare system.
 """
-import sfttoolbox
 from dataclasses import dataclass, field
+
 import networkx as nx
 import numpy as np
+
+import sfttoolbox
 
 
 # This allows a standard distribution call to take in the patient object (and does nothing with it)

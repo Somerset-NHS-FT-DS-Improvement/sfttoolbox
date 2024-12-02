@@ -1,8 +1,9 @@
-import pytest
-import networkx as nx
-from unittest.mock import Mock
 from pathlib import Path
 from typing import Any, List
+from unittest.mock import Mock
+
+import networkx as nx
+import pytest
 
 import sfttoolbox
 

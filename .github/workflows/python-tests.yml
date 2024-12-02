@@ -27,7 +27,7 @@ jobs:
           git diff --name-only | grep '\.py'$ | xargs -I{} black {} --check
       - name: Test isort
         run: |
-          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs isort --check
+          git diff --name-only | grep '\.py'$ | xargs isort --check
       - name: Test flake8
         run: |
-          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs flake8
+          git diff --name-only | grep '\.py'$ | xargs flake8

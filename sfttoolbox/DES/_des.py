@@ -30,12 +30,12 @@ attributes, and generation logic according to their specific needs.
 __all__ = ["Simulation", "distribution_wrapper"]
 
 import functools
-from typing import Protocol
-import networkx as nx
-from typing import List, Dict, Any, Optional
-from itertools import cycle
-import numpy as np
 import logging
+from itertools import cycle
+from typing import Any, Dict, List, Optional, Protocol
+
+import networkx as nx
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

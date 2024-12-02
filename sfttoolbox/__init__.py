@@ -1,4 +1,4 @@
-from . import graphing, plotting, DES
+from . import DES, graphing, plotting
 
 team_colours = {
     "red": {"hex": "#d1495b", "rgb": "RGB(209, 73, 91)"},
