@@ -26,3 +26,12 @@ jobs:
       - name: Test with pytest
         run: |
           pytest -v
+      - name: Test black
+        run: |
+          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs black --check
+      - name: Test isort
+        run: |
+          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs isort --check
+      - name: Test flake8
+        run: |
+          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs flake8
