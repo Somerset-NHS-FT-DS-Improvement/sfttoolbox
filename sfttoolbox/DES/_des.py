@@ -27,6 +27,7 @@ For examples, see files titled "_exampleX.py" in the examples directory.
 This module is designed to be flexible and extensible, allowing users to customize the graph structure, patient
 attributes, and generation logic according to their specific needs.
 """
+
 __all__ = ["Simulation", "distribution_wrapper"]
 
 import functools
