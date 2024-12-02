@@ -22,12 +22,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest black isort flake8
-      - name: Debug
-        run: |
-          python -c "from sfttoolbox import DES"
       - name: Test with pytest
         run: |
-          pytest -v /home/runner/work/sfttoolbox
+          python -m pytest -v
       - name: Test black
         run: |
           git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs black --check
