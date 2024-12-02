@@ -26,3 +26,6 @@ jobs:
       - name: Test with pytest
         run: |
           pytest -v
+      - name: Test black
+        run: |
+          git diff --name-only $GITHUB_BASE_REF $GITHUB_HEAD_REF | grep '\.py'$ | xargs black --check
