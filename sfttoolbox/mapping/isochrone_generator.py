@@ -13,7 +13,7 @@ IsochroneResult = namedtuple("IsochroneResult", ["isochrone_name", "polygons", "
 class IsochroneGenerator:
     def __init__(self, graph_path=None, place_name=None, network_type="drive", default_speed=48.28):
         """
-        Initialize the IsochroneGenerator object.
+        Initialise the IsochroneGenerator object.
 
         Parameters:
         - graph_path (str): Path to a pre-existing graph file (GraphML format).
