@@ -8,5 +8,6 @@ team_colours = {
     "grey": {"hex": "#dde6ed", "rgb": "RGB(221, 230, 237)"},
     "blue": {"hex": "#00789c", "rgb": "RGB(0, 120, 156)"},
     "dark_blue": {"hex": "#27374d", "rgb": "RGB(39, 55, 77)"},
+    "orange": {"hex": "#eb7956", "rgb": "RGB(235, 121, 86)"},
     "white": {"hex": "#ffffff", "rgb": "RGB(255, 255, 255)"},
 }
