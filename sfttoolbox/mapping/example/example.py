@@ -48,7 +48,7 @@ MPH_polygon = iso_generator.generate_isochrone(
 )
 
 # Generate a 10-minute isochrone from Bridgwater Community Hospital
-BWC_polygon = iso.generate_isochrone(
+BWC_polygon = iso_generator.generate_isochrone(
     city_name="Somerset, UK",
     name="Bridgwater Community Hospital",
     lon=-2.974192,
