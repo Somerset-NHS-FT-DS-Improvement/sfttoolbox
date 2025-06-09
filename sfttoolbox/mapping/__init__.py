@@ -1,1 +1,1 @@
-from .isochrone_generator import IsochroneGenerator
+from .isochrone_generator import *

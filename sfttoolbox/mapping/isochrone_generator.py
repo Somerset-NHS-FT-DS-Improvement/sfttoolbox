@@ -1,5 +1,46 @@
+"""
+Isochrone Module
+
+This module provides a framework for generating isochrone polygons based on travel times within road networks
+using OpenStreetMap data. It uses the `osmnx`, `networkx`, and `alphashape` libraries to load graphs, build
+subgraphs based on drive times, and generate geometric representations of reachable areas.
+
+Class:
+    - IsochroneGenerator: Manages graph loading, travel time calculations, isochrone generation,
+      shortest path extraction, GeoDataFrame conversion, and export operations.
+
+Usage:
+    1. Import the module and required libraries:
+       ```python
+       import json
+       import os
+       import alphashape
+       import geopandas as gpd
+       import networkx as nx
+       import osmnx as ox
+       from collections import namedtuple
+       from shapely import wkt
+       ```
+    2. Create an instance of `IsochroneGenerator`.
+    3. Load a graph using a place name or coordinates with `load_graph`.
+    4. Generate an isochrone polygon using `generate_isochrone`.
+    5. Optionally:
+        - Extract the boundary using `generate_boundary`.
+        - Convert the graph to GeoDataFrames using `convert_road_network_to_gdf`.
+        - Generate shortest paths within the isochrone using `generate_shortest_paths`.
+        - Export isochrone and boundary data to GeoJSON using `save_all_data`.
+        - Save network graphs using `save_graph`.
+
+Example:
+    See the file titled `example.py` in the `examples` directory.
+
+This module is intended for geospatial and mobility analytics, especially in urban planning,
+logistics, and service area visualization.
+"""
+
 import json
 import os
+from collections import namedtuple
 
 import alphashape
 import geopandas as gpd
@@ -8,14 +49,19 @@ import osmnx as ox
 from shapely import wkt
 from shapely.geometry import LineString, Point, Polygon, mapping
 
+IsochroneRegistry = namedtuple(
+    "IsochroneRegistry",
+    ["polygon", "centre_node", "lat", "lon", "drive_time", "place_name", "sub_graph"],
+)
+
 
 class IsochroneGenerator:
-    def __init__(self, default_speed=48.28):
+    def __init__(self, default_speed: float = 48.28032):
         """
-        Initialize the isochrone generator with a default speed.
+        Initialize the IsochroneGenerator with a default speed for edges missing speed data.
 
-        Parameters:
-        - default_speed (float): Speed in km/h used if no maxspeed is available.
+        Args:
+            default_speed (float): Default travel speed in km/h. Defaults to 48.28032 km/h.
         """
         self.default_speed = default_speed
         self.registry = {}
@@ -23,25 +69,48 @@ class IsochroneGenerator:
         self.graphs = {}
         self.circles = {}
 
-    def load_graph(self, place_name: str, network_type="drive") -> nx.MultiDiGraph:
+    def load_graph(
+        self,
+        place_name: str,
+        lat: float = None,
+        lon: float = None,
+        distance: float = 64374,
+        network_type: str = "drive",
+    ) -> nx.MultiDiGraph:
         """
-        Load a road network graph from OpenStreetMap and update it with travel time data.
+        Load a road network from OpenStreetMap, either by place name or by geographic coordinates.
 
-        Parameters:
-        - place_name (str): Name of the place to load the graph for.
-        - network_type (str): Type of street network to load.
+        Args:
+            place_name (str): Name of the place (used if lat/lon not provided).
+            lat (float, optional): Latitude for location-based loading.
+            lon (float, optional): Longitude for location-based loading.
+            distance (float): Distance in meters around the lat/lon to load the graph. Default is 64374.
+            network_type (str): Type of road network to load (e.g., "drive", "walk").
 
         Returns:
-        - nx.MultiDiGraph: Graph with travel times on edges.
+            nx.MultiDiGraph: A directed multigraph with time-annotated edges.
+
+        Raises:
+            ValueError: If neither place_name nor lat/lon are provided.
         """
-        self.G = ox.graph_from_place(place_name, network_type=network_type)
+        if lat is not None and lon is not None:
+            self.G = ox.graph_from_point(
+                center_point=[lat, lon],
+                dist=distance,
+                dist_type="network",
+                network_type=network_type,
+                simplify=True,
+            )
+        else:
+            self.G = ox.graph_from_place(place_name, network_type=network_type)
+
         self.__update_graph_with_times()
         self.graphs[place_name] = self.G
         return self.G
 
     def __update_graph_with_times(self) -> None:
         """
-        Add travel time (in minutes) to each edge in the graph based on speed limits.
+        Annotate graph edges with estimated travel times based on edge length and speed.
         """
         for u, v, k, data in self.G.edges(data=True, keys=True):
             if max_speed := data.get("maxspeed"):
@@ -54,18 +123,19 @@ class IsochroneGenerator:
             else:
                 speed = self.default_speed
 
+            speed *= 0.9  # Account for real-world delays like traffic.
             meters_per_minute = speed * 1000 / 60
             data["time"] = float(data["length"]) / meters_per_minute
 
     def __parse_max_speed_to_kmh(self, max_speed: str) -> float:
         """
-        Convert a maxspeed string to km/h.
+        Convert a maxspeed string to a float value in km/h.
 
-        Parameters:
-        - max_speed (str): Speed string, e.g., '50 km/h' or '30 mph'.
+        Args:
+            max_speed (str): String representation of speed, e.g., '30 mph', '50 km/h'.
 
         Returns:
-        - float: Speed in km/h.
+            float: Parsed speed in km/h.
         """
         if max_speed.lower() == "none" or not max_speed.strip():
             return self.default_speed
@@ -78,78 +148,76 @@ class IsochroneGenerator:
 
         return speed
 
-    def generate_boundary(self, city_name: str) -> gpd.GeoDataFrame:
+    def generate_boundary(self, place_name: str) -> gpd.GeoDataFrame:
         """
-        Get city boundary geometry as a GeoDataFrame.
+        Retrieve and store the administrative boundary for a location.
 
-        Parameters:
-        - city_name (str): Name of the city.
+        Args:
+            place_name (str): Name of the place to fetch the boundary for.
 
         Returns:
-        - gpd.GeoDataFrame: City boundary geometry.
+            gpd.GeoDataFrame: Geometry of the place boundary.
         """
-        city_boundary = ox.geocode_to_gdf(city_name)["geometry"].iloc[0]
-        self.place_boundary[city_name] = city_boundary
-        return city_boundary
+        place_boundary = ox.geocode_to_gdf(place_name)["geometry"].iloc[0]
+        self.place_boundary[place_name] = place_boundary
+        return place_boundary
 
     def generate_isochrone(
         self,
-        city_name: str,
-        name: str,
-        lon: float,
+        place_name: str,
+        isochrone_name: str,
         lat: float,
+        lon: float,
         drive_time: float,
         alpha: float = 30,
     ) -> Polygon:
         """
-        Create an isochrone polygon for a given time threshold from a point.
+        Generate an isochrone polygon for a given location and drive time.
 
-        Parameters:
-        - city_name (str): The name of the city the isochrone is in.
-        - name (str): Identifier for the isochrone.
-        - lon (float): Longitude of the center point.
-        - lat (float): Latitude of the center point.
-        - drive_time (float): Travel time in minutes.
-        - alpha (float): Alpha shape parameter.
+        Args:
+            place_name (str): Name of the place associated with the graph.
+            isochrone_name (str): Identifier for the isochrone.
+            lat (float): Latitude of the center point.
+            lon (float): Longitude of the center point.
+            drive_time (float): Time limit (in minutes) from the center node.
+            alpha (float): Alpha parameter for alpha shape generation.
 
         Returns:
-        - Polygon: Generated isochrone geometry.
+            Polygon: A shapely Polygon representing the isochrone boundary.
         """
-        self.G = self.graphs[city_name]
-        center_node = ox.distance.nearest_nodes(self.G, lon, lat)
+        self.G = self.graphs[place_name]
+        centre_node = ox.distance.nearest_nodes(self.G, lon, lat)
         sub_graph = nx.ego_graph(
-            self.G, center_node, radius=drive_time, distance="time"
+            self.G, centre_node, radius=drive_time, distance="time"
         )
-
         points = [(data["x"], data["y"]) for _, data in sub_graph.nodes(data=True)]
-        polys = alphashape.alphashape(points, alpha=alpha)
+        polygon = alphashape.alphashape(points, alpha=alpha)
 
-        if polys and polys.geom_type == "MultiPolygon":
-            polys = alphashape.alphashape(points, alpha=alpha / 2)
+        if polygon and polygon.geom_type == "MultiPolygon":
+            polygon = alphashape.alphashape(points, alpha=alpha / 2)
 
-        self.registry[name] = polys, center_node, [lat, lon], drive_time, city_name
-        return polys
+        self.registry[isochrone_name] = IsochroneRegistry(
+            polygon, centre_node, lat, lon, drive_time, place_name, sub_graph
+        )
+        return polygon
 
-    def generate_shortest_paths(self, isochrone_name: str):
+    def generate_shortest_paths(self, isochrone_name: str) -> list[dict]:
         """
-        Generate shortest path routes from center to boundary points of the isochrone.
+        Generate shortest path LineStrings from the isochrone center to its polygon boundary.
 
-        Parameters:
-        - isochrone_name (str): Name of the isochrone.
+        Args:
+            isochrone_name (str): Name of the isochrone in the registry.
 
         Returns:
-        - list[dict]: List of GeoJSON features representing the paths.
+            list[dict]: A list of GeoJSON-like LineString features representing shortest paths.
         """
         isochrone_data = self.registry[isochrone_name]
-        graph = self.graphs[isochrone_data[4]]
-        sub_graph = nx.ego_graph(
-            graph, isochrone_data[1], radius=isochrone_data[3], distance="time"
-        )
+        sub_graph = isochrone_data.sub_graph
 
         geojson_paths = []
         boundary_coords = (
-            list(isochrone_data[0].exterior.coords)
-            if isochrone_data[0].geom_type == "Polygon"
+            list(isochrone_data.polygon.exterior.coords)
+            if isochrone_data.polygon.geom_type == "Polygon"
             else []
         )
         boundary_points = [Point(lon, lat) for lon, lat in boundary_coords]
@@ -158,92 +226,43 @@ class IsochroneGenerator:
             nearest_node = ox.distance.nearest_nodes(sub_graph, point.x, point.y)
             route = nx.shortest_path(
                 sub_graph,
-                source=isochrone_data[1],
+                source=isochrone_data.centre_node,
                 target=nearest_node,
                 weight="length",
             )
             path_coords = [
                 (sub_graph.nodes[n]["x"], sub_graph.nodes[n]["y"]) for n in route
             ]
-            path_line = LineString(path_coords)
-
             geojson_paths.append(
                 {
                     "type": "Feature",
-                    "geometry": path_line.__geo_interface__,
+                    "geometry": LineString(path_coords).__geo_interface__,
                 }
             )
 
         return geojson_paths
 
-    def generate_road_network(self, isochrone_name: str):
+    def convert_road_network_to_gdf(
+        self, isochrone_name: str
+    ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
-        Export the road network within the isochrone to GeoJSON.
+        Convert the subgraph associated with an isochrone to GeoDataFrames.
 
-        Parameters:
-        - isochrone_name (str): Name of the isochrone.
+        Args:
+            isochrone_name (str): Name of the isochrone in the registry.
 
         Returns:
-        - dict: GeoJSON with nodes and edges.
+            tuple: A tuple of (nodes GeoDataFrame, edges GeoDataFrame).
         """
-        isochrone_data = self.registry[isochrone_name]
-        graph = self.graphs[isochrone_data[4]]
-        sub_graph = nx.ego_graph(
-            graph, isochrone_data[1], radius=isochrone_data[3], distance="time"
-        )
+        sub_graph = self.registry[isochrone_name].sub_graph
+        return ox.graph_to_gdfs(sub_graph, nodes=True, edges=True)
 
-        geojson = {"type": "FeatureCollection", "features": []}
-
-        for u, v, data in sub_graph.edges(data=True):
-            geometry = data.get("geometry")
-            if geometry:
-                if isinstance(geometry, str):
-                    geometry = wkt.loads(geometry)
-                geojson["features"].append(
-                    {
-                        "type": "Feature",
-                        "geometry": mapping(geometry),
-                        "properties": {
-                            "from": u,
-                            "to": v,
-                            "road_name": data.get("name", "Unknown road"),
-                        },
-                    }
-                )
-
-        for node, data in sub_graph.nodes(data=True):
-            position = data.get("position")
-            if position:
-                geojson["features"].append(
-                    {
-                        "type": "Feature",
-                        "geometry": {
-                            "type": "Point",
-                            "coordinates": position,
-                        },
-                        "properties": {"node_id": node},
-                    }
-                )
-
-        return geojson
-
-    def save_all_data(self, filename: str):
+    def save_all_data(self, filename: str) -> None:
         """
-        Saves all spatial data (boundaries, isochrones, circles) to a GeoJSON file,
-        and serializes associated graphs to GraphML files.
+        Save all boundary, isochrone, and circle data to a GeoJSON file.
 
-        This method compiles:
-        - Place boundaries from `self.place_boundary`
-        - Isochrone data from `self.registry`
-        - Circle center points from `self.circles`
-
-        into a single GeoJSON `FeatureCollection` and writes it to the specified file.
-        Additionally, graphs stored in `self.graphs` are saved individually as `.graphml` files.
-
-        Parameters:
-        ----------
-        filename : str
-            Path to the output GeoJSON file where features will be saved.
+        Args:
+            filename (str): Path to the output GeoJSON file.
         """
         features = []
 
@@ -260,15 +279,15 @@ class IsochroneGenerator:
             features.append(
                 {
                     "type": "Feature",
-                    "geometry": mapping(result[0]),
+                    "geometry": mapping(result.polygon),
                     "properties": {
                         "type": "isochrone",
                         "name": name,
-                        "center_node": result[1],
-                        "lat": result[2][0],
-                        "lon": result[2][1],
-                        "time": result[3],
-                        "city_name": result[4],
+                        "centre_node": result.centre_node,
+                        "lat": result.lat,
+                        "lon": result.lon,
+                        "time": result.drive_time,
+                        "place_name": result.place_name,
                     },
                 }
             )
@@ -292,15 +311,12 @@ class IsochroneGenerator:
         with open(filename, "w") as f:
             json.dump({"type": "FeatureCollection", "features": features}, f, indent=2)
 
-        for graph_name, graph in self.graphs.items():
-            self.save_graph(graph, f"{graph_name}.graphml")
-
-    def save_graph(self, graph, filename: str):
+    def save_graph(self, graph: nx.MultiDiGraph, filename: str) -> None:
         """
-        Save a network graph to a GraphML file.
+        Save a NetworkX graph to a GraphML file.
 
-        Parameters:
-        - graph (nx.Graph): Graph to save.
-        - filename (str): Output file path.
+        Args:
+            graph (nx.MultiDiGraph): The road network graph to be saved.
+            filename (str): Destination file path.
         """
         ox.save_graphml(graph, filename)
