@@ -38,6 +38,8 @@ This module is intended for geospatial and mobility analytics, especially in urb
 logistics, and service area visualisation.
 """
 
+__all__ = ["IsochroneGenerator", "IsochroneRegistry"]
+
 import json
 import os
 from collections import namedtuple
@@ -47,7 +49,7 @@ import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 from shapely import wkt
-from shapely.geometry import *
+from shapely.geometry import LineString, Point, Polygon, mapping
 
 IsochroneRegistry = namedtuple(
     "IsochroneRegistry",
@@ -74,7 +76,7 @@ class IsochroneGenerator:
         place_name: str,
         lat: float = None,
         lon: float = None,
-        distance: float = 64374,  # in case distance isn't provided, defaul distance (which is 40 miles) will be use to load the graph
+        distance: float = 64374,  # in case distance isn't provided, default distance (which is 40 miles) will be use to load the graph
         network_type: str = "drive",
     ) -> nx.MultiDiGraph:
         """
@@ -94,7 +96,7 @@ class IsochroneGenerator:
             ValueError: If neither place_name nor lat/lon are provided.
         """
         if lat is not None and lon is not None:
-            self.G = ox.graph_from_point(
+            G = ox.graph_from_point(
                 center_point=[lat, lon],
                 dist=distance,
                 dist_type="network",
@@ -102,17 +104,17 @@ class IsochroneGenerator:
                 simplify=True,
             )
         else:
-            self.G = ox.graph_from_place(place_name, network_type=network_type)
+            G = ox.graph_from_place(place_name, network_type=network_type)
 
-        self.__update_graph_with_times()
-        self.graphs[place_name] = self.G
-        return self.G
+        self.__update_graph_with_times(G)
+        self.graphs[place_name] = G
+        return G
 
-    def __update_graph_with_times(self) -> None:
+    def __update_graph_with_times(self, G: nx.MultiDiGraph) -> None:
         """
         Annotate graph edges with estimated travel times based on edge length and speed.
         """
-        for u, v, k, data in self.G.edges(data=True, keys=True):
+        for u, v, k, data in G.edges(data=True, keys=True):
             if max_speed := data.get("maxspeed"):
                 if isinstance(max_speed, list):
                     speed = sum(
@@ -185,11 +187,9 @@ class IsochroneGenerator:
         Returns:
             Polygon: A shapely Polygon representing the isochrone boundary.
         """
-        self.G = self.graphs[place_name]
-        centre_node = ox.distance.nearest_nodes(self.G, lon, lat)
-        sub_graph = nx.ego_graph(
-            self.G, centre_node, radius=drive_time, distance="time"
-        )
+        G = self.graphs[place_name]
+        centre_node = ox.distance.nearest_nodes(G, lon, lat)
+        sub_graph = nx.ego_graph(G, centre_node, radius=drive_time, distance="time")
         points = [(data["x"], data["y"]) for _, data in sub_graph.nodes(data=True)]
         polygon = alphashape.alphashape(points, alpha=alpha)
 
