@@ -3,8 +3,9 @@ import os
 import geopandas as gpd
 import networkx as nx
 import pytest
-from sfttoolbox.mapping import IsochroneGenerator
 from shapely.geometry import Polygon
+
+from sfttoolbox.mapping import IsochroneGenerator
 
 
 @pytest.fixture(scope="module")
