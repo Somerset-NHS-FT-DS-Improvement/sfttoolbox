@@ -2,3 +2,8 @@ networkx
 numpy
 plotly >=5.19
 pyvis
+geopandas
+folium
+shapely
+black
+isort
