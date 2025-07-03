@@ -1,10 +1,12 @@
 import os
-import pytest
 import shutil
 import urllib.request
 import zipfile
 
+import pytest
+
 from sfttoolbox import mapping
+
 
 @pytest.fixture(scope="module")
 def setup_geojson_files():
@@ -27,6 +29,7 @@ def setup_geojson_files():
     if os.path.exists(folder_name):
         shutil.rmtree(folder_name)
 
+
 @pytest.fixture
 def somerset_map_instance():
     """
@@ -34,11 +37,13 @@ def somerset_map_instance():
     """
     return mapping.SomersetMap()
 
+
 def test_map_instantiation(somerset_map_instance):
     """
     Test that a SomersetMap instance is created successfully.
     """
     assert isinstance(somerset_map_instance, mapping.SomersetMap)
+
 
 def test_add_deprivation(somerset_map_instance, setup_geojson_files):
     """
@@ -46,11 +51,13 @@ def test_add_deprivation(somerset_map_instance, setup_geojson_files):
     """
     somerset_map_instance.add_deprivation()
 
+
 def test_add_bus_routes(somerset_map_instance, setup_geojson_files):
     """
     Test adding bus routes layer to the map.
     """
     somerset_map_instance.add_bus_routes()
+
 
 def test_add_somerset_boundary(somerset_map_instance):
     """
@@ -58,11 +65,13 @@ def test_add_somerset_boundary(somerset_map_instance):
     """
     somerset_map_instance.add_somerset_boundary()
 
+
 def test_add_layer_control(somerset_map_instance):
     """
     Test adding layer control to the map.
     """
     somerset_map_instance.add_layer_control()
+
 
 def test_save_map(somerset_map_instance):
     """
@@ -72,4 +81,3 @@ def test_save_map(somerset_map_instance):
     somerset_map_instance.save(output_file)
     assert os.path.exists(output_file)
     os.remove(output_file)
-
