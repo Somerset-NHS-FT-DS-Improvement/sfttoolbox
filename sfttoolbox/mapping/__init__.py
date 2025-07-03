@@ -201,7 +201,7 @@ class SomersetMap:
     def add_deprivation(
         self,
         geo_data: str = "somerset_geojson_files\somerset_lsoa2011.geojson",
-        data_filepath: str = "File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
+        data_filepath: str = "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
         columns: List[str] = [
             "LSOA code (2011)",
             "Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)",
@@ -268,10 +268,23 @@ class SomersetMap:
         line_opacity: float = 0.1,
     ) -> folium.Choropleth:
         """
-        Creates a chloropleth plot that can be added to the map.
+        Creates a choropleth layer for a folium map using the provided geospatial and tabular data.
 
         Args:
+            geo_data (str): Path to the GeoJSON file or a GeoJSON string containing the geographic boundaries.
+            name (str): Name of the layer to be displayed in the map's layer control.
+            legend_name (str): Title for the legend displayed on the map.
+            data (str): Path to the data file (e.g., CSV) or a DataFrame containing the values to visualise.
+            columns (List[str]): A list with two elements: the first is the column with geographic identifiers,
+            and the second is the column with the values to visualise.
+            key_on (str, optional): The GeoJSON property key to match with the data. Defaults to "properties.LSOA11CD".
+            fill_color (str, optional): Colour scheme for the choropleth. Defaults to "RdBu".
+            bins (int, optional): Number of bins to divide the data into. Defaults to 10.
+            fill_opacity (float, optional): Opacity of the fill colour. Defaults to 0.7.
+            line_opacity (float, optional): Opacity of the boundary lines. Defaults to 0.1.
 
+        Returns:
+            folium.Choropleth: A folium Choropleth object that can be added to a folium map.
         """
         return folium.Choropleth(
             geo_data=geo_data,
