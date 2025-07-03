@@ -31,7 +31,7 @@ def setup_geojson_files():
 
 
 @pytest.fixture
-def somerset_map_instance():
+def somerset_map_instance(setup_geojson_files):
     """
     Fixture to create a SomersetMap instance.
     """
