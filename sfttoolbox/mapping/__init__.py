@@ -309,14 +309,14 @@ class SomersetMap:
             name="Somerset Boundary",
         ).add_to(self.somerset_map)
 
-    def add_patient_coords(self, patient_coords: List[Tuple[float, float]]) -> None:
+    def add_patient_coords(self, patient_coords: List[Tuple[float, float]], layer_name: str = "patients") -> None:
         """
         Add patient coordinates to the map.
 
         Args:
             patient_coords (list[tuple[float, float]]): List of patient coordinates as tuples of (latitude, longitude).
         """
-        marker_cluster = MarkerCluster(name="Referrals").add_to(self.somerset_map)
+        marker_cluster = MarkerCluster(name=layer_name).add_to(self.somerset_map)
 
         for coord in patient_coords:
             folium.features.Circle(coord, fill=True, fill_opacity=1).add_to(
