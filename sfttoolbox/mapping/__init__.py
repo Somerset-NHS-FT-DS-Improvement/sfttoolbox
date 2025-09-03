@@ -309,7 +309,9 @@ class SomersetMap:
             name="Somerset Boundary",
         ).add_to(self.somerset_map)
 
-    def add_patient_coords(self, patient_coords: List[Tuple[float, float]], layer_name: str = "patients") -> None:
+    def add_patient_coords(
+        self, patient_coords: List[Tuple[float, float]], layer_name: str = "patients"
+    ) -> None:
         """
         Add patient coordinates to the map.
 
