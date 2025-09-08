@@ -1,3 +1,4 @@
 sfttoolbox.egg-info
 __pycache__
 .idea
+.ipynb_checkpoints/

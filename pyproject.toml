@@ -21,7 +21,10 @@ dependencies = [
     "pyvis",
     "folium",
     "geopandas",
-    "shapely"
+    "shapely",
+    "networkx",
+    "numpy",
+    "osmnx"
 ]
 
 [project.urls]
