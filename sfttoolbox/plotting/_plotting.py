@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from pyvis.network import Network
 
 
-def generate_sankey(G: nx.Graph) -> None:
+def generate_sankey(G: nx.Graph) -> go.Figure:
     """
     Generate and display a Sankey diagram from a NetworkX graph.
 
@@ -23,7 +23,7 @@ def generate_sankey(G: nx.Graph) -> None:
     G (nx.Graph): A NetworkX graph with nodes and edges containing the necessary attributes.
 
     Returns:
-    None
+    Plotly Figure
 
     Example:
     --------
@@ -75,7 +75,7 @@ def generate_sankey(G: nx.Graph) -> None:
         ]
     )
 
-    fig.show()
+    return fig
 
 
 def visualise_network(
