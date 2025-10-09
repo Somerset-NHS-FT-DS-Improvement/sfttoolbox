@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sfttoolbox"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [
     { name="Chris Sampson", email="christopher.sampson@somersetft.nhs.uk" },
-    { name="Sam Vautier", email="samantha.vautier@somersetft.nhs.uk" }
+    { name="Sam Vautier", email="samantha.vautier@somersetft.nhs.uk" },
+    { name="Jawad Iqbal", email="jawad.iqbal@somersetft.nhs.uk" }
 ]
 description = "Useful tools for sft data science"
 readme = "README.md"
@@ -24,7 +25,8 @@ dependencies = [
     "shapely",
     "networkx",
     "numpy",
-    "osmnx"
+    "osmnx",
+    "alphashape"
 ]
 
 [project.urls]
