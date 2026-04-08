@@ -242,7 +242,7 @@ class SomersetMap:
         Args:
             geo_data (str, optional): Filepath to the geographical data. Defaults to "somerset_geojson_files\chloropleth_compatible_somerset_lsoa2021.geojson".
             data_filepath  (str, optional): Filepath to the data. Defaults to "somerset_geojson_files\File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv"
-            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2021)', 'Total population: mid 2015 (excluding prisoners)']
+            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2021)', 'Total population: mid 2022']
             key_on (str, optional): Name of the feature in the geographical data to merge with the first column above. Defaults to properties.LSOA21CD
         """
         self._create_chloropleth(
