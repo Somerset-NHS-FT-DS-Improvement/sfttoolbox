@@ -49,7 +49,6 @@ transport planning problems using open data and Python tooling.
 import json
 
 import folium
-
 from sfttoolbox.mapping import IsochroneGenerator
 
 # Initialise the generator

@@ -30,7 +30,9 @@ class SomersetMap:
         Args:
             somerset_boundary_filepath (str, optional): Filepath to the somerset boundary. Defaults to "somerset_geojson_files\somerset_boundary.geojson".
         """
-        self.somerset_map = folium.Map(location=(51.1, -3.12), zoom_start=10, tiles="CartoDB voyager")
+        self.somerset_map = folium.Map(
+            location=(51.1, -3.12), zoom_start=10, tiles="CartoDB voyager"
+        )
 
         self.ig = IsochroneGenerator()
 
