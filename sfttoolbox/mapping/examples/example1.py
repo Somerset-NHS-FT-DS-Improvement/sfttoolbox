@@ -99,7 +99,7 @@ center_lat, center_lon = (
     first_feature["geometry"]["coordinates"][0][0][1],
     first_feature["geometry"]["coordinates"][0][0][0],
 )
-m = folium.Map(location=[center_lat, center_lon], zoom_start=9)
+m = folium.Map(location=[center_lat, center_lon], zoom_start=9, tiles="CartoDB voyager")
 
 # Plot each feature
 for index, feature in enumerate(geojson_data["features"]):

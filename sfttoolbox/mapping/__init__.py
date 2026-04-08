@@ -30,7 +30,7 @@ class SomersetMap:
         Args:
             somerset_boundary_filepath (str, optional): Filepath to the somerset boundary. Defaults to "somerset_geojson_files\somerset_boundary.geojson".
         """
-        self.somerset_map = folium.Map(location=(51.1, -3.12), zoom_start=10)
+        self.somerset_map = folium.Map(location=(51.1, -3.12), zoom_start=10, tiles="CartoDB voyager")
 
         self.ig = IsochroneGenerator()
 
@@ -200,22 +200,22 @@ class SomersetMap:
 
     def add_deprivation(
         self,
-        geo_data: str = "somerset_geojson_files\somerset_lsoa2011.geojson",
-        data_filepath: str = "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
+        geo_data: str = "somerset_geojson_files\somerset_lsoa2021.geojson",
+        data_filepath: str = "somerset_geojson_files\File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv",
         columns: List[str] = [
-            "LSOA code (2011)",
+            "LSOA code (2021)",
             "Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)",
         ],
-        key_on: str = "properties.LSOA11CD",
+        key_on: str = "properties.LSOA21CD",
     ) -> None:
         """
         Add deprivation data to the map.
 
         Args:
-            geo_data (str, optional): Filepath to the geographical data. Defaults to "somerset_geojson_files\chloropleth_compatible_somerset_lsoa2011.geojson".
-            data_filepath  (str, optional): Filepath to the data. Defaults to "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv"
-            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2011)', 'Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)']
-            key_on (str, optional): Name of the feature in the geographical data to merge with the first column above. Defaults to properties.LSOA11CD
+            geo_data (str, optional): Filepath to the geographical data. Defaults to "somerset_geojson_files\chloropleth_compatible_somerset_lsoa2021.geojson".
+            data_filepath  (str, optional): Filepath to the data. Defaults to "somerset_geojson_files\File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv"
+            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2021)', 'Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)']
+            key_on (str, optional): Name of the feature in the geographical data to merge with the first column above. Defaults to properties.LSOA21CD
         """
         self._create_chloropleth(
             geo_data,
@@ -228,22 +228,22 @@ class SomersetMap:
 
     def add_population(
         self,
-        geo_data: str = "somerset_geojson_files\somerset_lsoa2011.geojson",
-        data_filepath: str = "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
+        geo_data: str = "somerset_geojson_files\somerset_lsoa2021.geojson",
+        data_filepath: str = "somerset_geojson_files\File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv",
         columns: List[str] = [
-            "LSOA code (2011)",
-            "Total population: mid 2015 (excluding prisoners)",
+            "LSOA code (2021)",
+            "Total population: mid 2022",
         ],
-        key_on: str = "properties.LSOA11CD",
+        key_on: str = "properties.LSOA21CD",
     ) -> None:
         """
         Add population data to the map.
 
         Args:
-            geo_data (str, optional): Filepath to the geographical data. Defaults to "somerset_geojson_files\chloropleth_compatible_somerset_lsoa2011.geojson".
-            data_filepath  (str, optional): Filepath to the data. Defaults to "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv"
-            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2011)', 'Total population: mid 2015 (excluding prisoners)']
-            key_on (str, optional): Name of the feature in the geographical data to merge with the first column above. Defaults to properties.LSOA11CD
+            geo_data (str, optional): Filepath to the geographical data. Defaults to "somerset_geojson_files\chloropleth_compatible_somerset_lsoa2021.geojson".
+            data_filepath  (str, optional): Filepath to the data. Defaults to "somerset_geojson_files\File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv"
+            columns (list[tuple[float, float]], optional): columns to use from the data. Defaults to ['LSOA code (2021)', 'Total population: mid 2015 (excluding prisoners)']
+            key_on (str, optional): Name of the feature in the geographical data to merge with the first column above. Defaults to properties.LSOA21CD
         """
         self._create_chloropleth(
             geo_data,
@@ -261,7 +261,7 @@ class SomersetMap:
         legend_name: str,
         data: str,
         columns: List[str],
-        key_on: str = "properties.LSOA11CD",
+        key_on: str = "properties.LSOA21CD",
         fill_color: str = "RdBu",
         bins: int = 10,
         fill_opacity: float = 0.7,
@@ -277,7 +277,7 @@ class SomersetMap:
             data (str): Path to the data file (e.g., CSV) or a DataFrame containing the values to visualise.
             columns (List[str]): A list with two elements: the first is the column with geographic identifiers,
             and the second is the column with the values to visualise.
-            key_on (str, optional): The GeoJSON property key to match with the data. Defaults to "properties.LSOA11CD".
+            key_on (str, optional): The GeoJSON property key to match with the data. Defaults to "properties.LSOA21CD".
             fill_color (str, optional): Colour scheme for the choropleth. Defaults to "RdBu".
             bins (int, optional): Number of bins to divide the data into. Defaults to 10.
             fill_opacity (float, optional): Opacity of the fill colour. Defaults to 0.7.
