@@ -1,8 +1,13 @@
 import numpy as np
 import pytest
 
-from sfttoolbox.simulation import (ArrivalProfile, CapacityPool, Pathway,
-                                   PathwayStep, SimulationFramework)
+from sfttoolbox.simulation import (
+    ArrivalProfile,
+    CapacityPool,
+    Pathway,
+    PathwayStep,
+    SimulationFramework,
+)
 
 # ---------------------------------------------------------------------
 # Fixtures
