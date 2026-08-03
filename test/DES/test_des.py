@@ -1,17 +1,13 @@
 import numpy as np
 import pytest
 
-from sfttoolbox.simulation import (
-    ArrivalProfile,
-    CapacityPool,
-    Pathway,
-    PathwayStep,
-    SimulationFramework,
-)
+from sfttoolbox.simulation import (ArrivalProfile, CapacityPool, Pathway,
+                                   PathwayStep, SimulationFramework)
 
 # ---------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------
+
 
 @pytest.fixture
 def arrival_histogram():
@@ -41,6 +37,7 @@ def simple_pathway():
 # ---------------------------------------------------------------------
 # Pathway Tests
 # ---------------------------------------------------------------------
+
 
 def test_pathway_identifies_start_node(simple_pathway):
     pathway = Pathway(simple_pathway, "Test")
@@ -93,6 +90,7 @@ def test_find_next_step_returns_terminal_node(simple_pathway):
 # Arrival Profile Tests
 # ---------------------------------------------------------------------
 
+
 def test_arrival_profile_calculates_lambda_max(arrival_histogram):
     profile = ArrivalProfile(
         num_patients=100,
@@ -110,18 +108,15 @@ def test_arrival_profile_acceptance_probabilities_bounded(
         arrival_histogram=arrival_histogram,
     )
 
-    assert np.all(
-        profile.acceptance_probabilities <= 1
-    )
+    assert np.all(profile.acceptance_probabilities <= 1)
 
-    assert np.all(
-        profile.acceptance_probabilities >= 0
-    )
+    assert np.all(profile.acceptance_probabilities >= 0)
 
 
 # ---------------------------------------------------------------------
 # Resource Tests
 # ---------------------------------------------------------------------
+
 
 def test_resource_registration():
     sf = SimulationFramework()
@@ -137,6 +132,7 @@ def test_resource_registration():
 # ---------------------------------------------------------------------
 # Pathway Registration Tests
 # ---------------------------------------------------------------------
+
 
 def test_register_pathway(
     arrival_histogram,
@@ -187,6 +183,7 @@ def test_register_pathway_with_missing_resource_fails(
 # ---------------------------------------------------------------------
 # Simulation Tests
 # ---------------------------------------------------------------------
+
 
 def test_simulation_generates_patients(
     arrival_histogram,
@@ -283,10 +280,7 @@ def test_resource_usage_balances(
 
     events = sf.metrics["room_used"]
 
-    net_usage = sum(
-        delta
-        for _, delta in events
-    )
+    net_usage = sum(delta for _, delta in events)
 
     assert net_usage == 0
 
@@ -294,6 +288,7 @@ def test_resource_usage_balances(
 # ---------------------------------------------------------------------
 # Branching Logic Tests
 # ---------------------------------------------------------------------
+
 
 def test_branching_pathway():
     pathway = Pathway(

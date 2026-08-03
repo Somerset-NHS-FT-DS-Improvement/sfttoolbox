@@ -178,18 +178,18 @@ __all__ = [
     "SimulationFramework",
 ]
 
+import logging
+from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
-import simpy
+from typing import Any, Callable, Dict, List, Optional
+
 import networkx as nx
-from typing import Any, Dict, List, Optional, Callable
-from abc import ABC, abstractmethod
-
-import logging
-
 import numpy as np
+import simpy
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Patient:
@@ -202,6 +202,7 @@ class Patient:
         discharge_time (Optional[float]): Simulation time at which the patient completed their pathway.
         pathway (List[str]): Audit trail of pathway steps completed by the patient.
     """
+
     id: str
     arrival_time: Optional[float] = None
     discharge_time: Optional[float] = None
@@ -220,12 +221,13 @@ class PathwayStep:
         prev_step (Optional[str]): Name of the predecessor step.
         probability (float): Probability of selecting this step from its predecessor.
     """
+
     name: str
     duration: float | Callable[[], float]
     resource_label: str
     prev_step: Optional[str] = None
     probability: float = 1.0
-    
+
 
 @dataclass
 class Pathway:
@@ -237,15 +239,15 @@ class Pathway:
         label (str): Unique identifier for the pathway.
         seed (int): Random seed used when selecting branching routes.
     """
+
     pathway: List[PathwayStep]
     label: str
     seed: int = 42
 
-
     def __post_init__(self) -> None:
         """
         Initialise the pathway.
-    
+
         Attributes:
             pathway_graph (nx.DiGraph): Graph representation of the pathway.
             start_node (str): Name of the first node in the pathway.
@@ -257,11 +259,11 @@ class Pathway:
     def _create_pathway_graph(self) -> tuple[nx.DiGraph, str]:
         """
         Create a directed graph representation of the pathway.
-    
+
         Attributes:
             G (nx.DiGraph): Directed graph containing pathway nodes and edges.
             start_node (str): Starting node within the pathway graph.
-    
+
         Returns:
             tuple[nx.DiGraph, str]: The pathway graph and the identified start node.
         """
@@ -271,18 +273,23 @@ class Pathway:
         edges = []
         start_nodes = []
         for step in self.pathway:
-            node = (step.name, {"duration":step.duration, "resource_label": step.resource_label})
-            edge = (step.prev_step, step.name, {"probability":step.probability})
-        
+            node = (
+                step.name,
+                {"duration": step.duration, "resource_label": step.resource_label},
+            )
+            edge = (step.prev_step, step.name, {"probability": step.probability})
+
             nodes.append(node)
             if step.prev_step is not None:
                 edges.append(edge)
             else:
                 start_nodes.append(node)
 
-        assert len(start_nodes) == 1, f"There are multiple start points in the pathway, {start_nodes}"
+        assert (
+            len(start_nodes) == 1
+        ), f"There are multiple start points in the pathway, {start_nodes}"
         start_node = start_nodes[0][0]
-        
+
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
 
@@ -294,10 +301,10 @@ class Pathway:
     ) -> tuple[Optional[str], Optional[str], float]:
         """
         Determine the next step in the pathway.
-    
+
         Attributes:
             current_node (Optional[str]): Current node occupied by the patient.
-    
+
         Returns:
             tuple[Optional[str], Optional[str], float]:
                 The next node, resource name and duration associated with the step.
@@ -308,8 +315,15 @@ class Pathway:
             wait_duration = self._get_duration(node)
             resource_label = self.pathway_graph.nodes[node]["resource_label"]
         else:
-            nodes_and_weights = [*zip(*[[node, node_dict["probability"]] for node, node_dict in self.pathway_graph[current_node].items()])]            
-    
+            nodes_and_weights = [
+                *zip(
+                    *[
+                        [node, node_dict["probability"]]
+                        for node, node_dict in self.pathway_graph[current_node].items()
+                    ]
+                )
+            ]
+
             if len(nodes_and_weights) != 0:
                 nodes, weights = nodes_and_weights
                 node = str(self.choice_rng.choice(nodes, p=weights))
@@ -326,33 +340,35 @@ class Pathway:
     def _get_duration(self, node: str) -> float:
         """
         Retrieve the duration associated with a pathway node.
-    
+
         Attributes:
             node (str): Name of the pathway node.
-    
+
         Returns:
             float: Duration of the node. If the duration is callable,
                 the callable is evaluated and the sampled value returned.
         """
         duration = self.pathway_graph.nodes[node]["duration"]
         return duration() if callable(duration) else duration
-    
+
     def plot_pathway(self, filename: str) -> None:
         """
         Generate an HTML file to visualize the graph using Mermaid.js.
-    
+
         Args:
             filename (str): The name of the file where the graph visualisation will be saved.
         """
-        node_numbers = {v: k for k, v in dict(enumerate(self.pathway_graph.nodes)).items()}
-    
+        node_numbers = {
+            v: k for k, v in dict(enumerate(self.pathway_graph.nodes)).items()
+        }
+
         graph_string = "\n".join(
             [
                 self._format_edge(edge, node_numbers)
                 for edge in self.pathway_graph.edges(data=True)
             ]
         )
-    
+
         html_string = f"""
         <html>
         <body>
@@ -374,18 +390,18 @@ class Pathway:
         </body>
         </html>
         """
-    
+
         with open(filename, "w") as fout:
             fout.write(html_string)
 
     def _format_node(self, node_name: str, attributes: Dict[str, Any]) -> str:
         """
         Format the node information for graph visualization.
-    
+
         Args:
             node_name (str): The name of the node.
             attributes (Dict[str, Any]): The attributes of the node.
-    
+
         Returns:
             str: The formatted string representation of the node.
         """
@@ -395,27 +411,27 @@ class Pathway:
             atts.append(f"{k}: {v}")
         atts = "\n".join(atts)
         return f"{node_name}\n{atts}"
-    
+
     def _format_edge(self, edge: Any, node_numbers: Dict[Any, int]) -> str:
         """
         Format the edge information for graph visualization.
-    
+
         Args:
             edge (Any): The edge in the graph, including source, target, and properties.
             node_numbers (Dict[Any, int]): A mapping of node names to their corresponding numbers.
-    
+
         Returns:
             str: The formatted string representation of the edge.
         """
         src, tgt, props = edge
-    
+
         prop_string = ""
         if props:
             prop_string = "|" + "\n".join([f"{k}: {v}" for k, v in props.items()]) + "|"
-    
+
         return f"{node_numbers[src]}[{self._format_node(src, self.pathway_graph.nodes[src])}] -->{prop_string} {node_numbers[tgt]}[{self._format_node(tgt, self.pathway_graph.nodes[tgt])}]"
 
-        
+
 @dataclass
 class ArrivalProfile:
     """
@@ -427,6 +443,7 @@ class ArrivalProfile:
         acceptance_probabilities (Any): Acceptance probabilities for thinning.
         lambda_max (float): Maximum arrival rate used by the thinning algorithm.
     """
+
     num_patients: int
     arrival_histogram: Any
 
@@ -442,7 +459,9 @@ class ArrivalProfile:
             interarrival_generator (Optional[Any]): Generator responsible for
                 producing interarrival times.
         """
-        self.acceptance_probabilities, self.lambda_max = self._calculate_acceptance_probabilities()
+        self.acceptance_probabilities, self.lambda_max = (
+            self._calculate_acceptance_probabilities()
+        )
         self.interarrival_generator = None
 
     def _calculate_acceptance_probabilities(
@@ -462,7 +481,11 @@ class ArrivalProfile:
         Returns:
             tuple[Any, float]: Acceptance probabilities and maximum arrival rate.
         """
-        mean_num_patients = (self.arrival_histogram[0] / self.arrival_histogram[0].sum() * self.num_patients).round()
+        mean_num_patients = (
+            self.arrival_histogram[0]
+            / self.arrival_histogram[0].sum()
+            * self.num_patients
+        ).round()
         arrival_rate = mean_num_patients / 60
 
         lambda_max = arrival_rate.max()
@@ -481,6 +504,7 @@ class PathwayInformation:
         interarrival_generator (Optional[InterarrivalCalculator]):
             Generator used to sample arrivals.
     """
+
     arrival_profile: ArrivalProfile
     pathway: Pathway
     interarrival_generator: Optional["InterarrivalCalculator"] = field(
@@ -513,8 +537,8 @@ class PathwayInformation:
         ), "Please register an interarrival calculator."
 
         return self.interarrival_generator.calculate_interarrival_time()
-        
-        
+
+
 class ResourcePool(ABC):
     """
     Abstract base class representing a resource pool.
@@ -529,7 +553,7 @@ class ResourcePool(ABC):
     All resource implementations should expose a common
     request/release interface to the simulation framework.
     """
-    
+
     @abstractmethod
     def request(self, patient: Patient) -> Any:
         """
@@ -559,6 +583,7 @@ class ResourcePool(ABC):
         """
         self.resource.release(allocation)
 
+
 class CapacityPool(ResourcePool):
     """
     Fixed-capacity resource pool.
@@ -567,11 +592,7 @@ class CapacityPool(ResourcePool):
         resource (simpy.Resource): Underlying SimPy resource.
     """
 
-    def __init__(
-        self,
-        env: simpy.Environment,
-        capacity: int
-    ) -> None:
+    def __init__(self, env: simpy.Environment, capacity: int) -> None:
         """
         Create a fixed-capacity resource pool.
 
@@ -618,10 +639,14 @@ class CapacityPool(ResourcePool):
 class InterarrivalCalculator:
     def __init__(self, env, pathway_information, seed1=42, seed2=42):
         self.env = env
-        
+
         self.lambda_max = pathway_information.arrival_profile.lambda_max
-        self.total_arrival_time = len(pathway_information.arrival_profile.arrival_histogram[0])
-        self.acceptance_probabilities = pathway_information.arrival_profile.acceptance_probabilities
+        self.total_arrival_time = len(
+            pathway_information.arrival_profile.arrival_histogram[0]
+        )
+        self.acceptance_probabilities = (
+            pathway_information.arrival_profile.acceptance_probabilities
+        )
 
         self.exp_rng = np.random.default_rng(seed1)
         self.unif_rng = np.random.default_rng(seed2)
@@ -640,7 +665,7 @@ class InterarrivalCalculator:
                 break
 
         return interarrival_time
-        
+
 
 class SimulationFramework:
     """
@@ -718,8 +743,7 @@ class SimulationFramework:
             None: Pathway is added to the simulation framework.
         """
         resource_comparison = {
-            pathway_step.resource_label
-            for pathway_step in pathway
+            pathway_step.resource_label for pathway_step in pathway
         }.difference(set(self.resources.keys()))
 
         assert (
@@ -782,9 +806,7 @@ class SimulationFramework:
         patient_count = 1
 
         while True:
-            yield self.env.timeout(
-                pathway_info.calculate_interarrival_time()
-            )
+            yield self.env.timeout(pathway_info.calculate_interarrival_time())
 
             patient = Patient(
                 f"{pathway_info.pathway.label}{patient_count}",
@@ -838,42 +860,29 @@ class SimulationFramework:
                 if prev_resource is not None:
                     prev_resource.release(prev_req)
 
-                    self.metrics[
-                        f"{prev_label}_used"
-                    ].append((self.env.now, -1))
+                    self.metrics[f"{prev_label}_used"].append((self.env.now, -1))
 
                 patient.discharge_time = self.env.now
                 break
 
             resource = self.resources[resource_label]
 
-            logging.info(
-                f"Patient {patient.id} requesting "
-                f"{resource_label}"
-            )
+            logging.info(f"Patient {patient.id} requesting " f"{resource_label}")
 
             req = resource.request(patient)
             yield req
 
-            self.metrics[
-                f"{resource_label}_used"
-            ].append((self.env.now, 1))
+            self.metrics[f"{resource_label}_used"].append((self.env.now, 1))
 
             if prev_resource is not None:
                 prev_resource.release(prev_req)
 
-                self.metrics[
-                    f"{prev_label}_used"
-                ].append((self.env.now, -1))
+                self.metrics[f"{prev_label}_used"].append((self.env.now, -1))
 
-            logging.info(
-                f"Patient {patient.id} waiting for "
-                f"{wait_duration}"
-            )
+            logging.info(f"Patient {patient.id} waiting for " f"{wait_duration}")
 
             yield self.env.timeout(wait_duration)
 
             prev_req = req
             prev_resource = resource
             prev_label = resource_label
-
