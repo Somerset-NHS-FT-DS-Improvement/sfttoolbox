@@ -180,7 +180,7 @@ __all__ = [
 
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -372,7 +372,7 @@ class Pathway:
         html_string = f"""
         <html>
         <body>
-        
+
         <style>
             .node rect {{
                 fill: #edae49 !important;
@@ -849,6 +849,7 @@ class SimulationFramework:
         current_node = None
         prev_resource = None
         prev_label = None
+        prev_req = None
 
         while True:
             current_node, resource_label, wait_duration = (
