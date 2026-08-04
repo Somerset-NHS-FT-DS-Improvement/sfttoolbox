@@ -33,6 +33,9 @@ dependencies = [
 Homepage = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox"
 Issues = "https://github.com/SomersetNHSFoundationTrust/sfttoolbox/issues"
 
+[tool.isort]
+profile = "black"
+
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["notebooks"]
