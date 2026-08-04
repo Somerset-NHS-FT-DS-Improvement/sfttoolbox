@@ -1,103 +1,122 @@
 """
 Simulation Example 1
 
-This example demonstrates a simple simulation using a directed graph where patient movement is determined by
-probabilities. This example does not take node capacity into account.
+This example demonstrates the basic use of the simulation framework
+to model patients moving through a simple healthcare pathway.
 
-To run this example, use the following command in the terminal:
+Patients arrive throughout the day according to a time-varying
+arrival profile and progress through three stages:
+
+    1. Triage
+    2. Assessment
+    3. Treatment
+
+Each stage requires a resource with finite capacity. If all
+resources are occupied, patients queue until capacity becomes
+available.
+
+The example illustrates:
+
+    - Creating a patient pathway.
+    - Defining an arrival profile.
+    - Registering simulation resources.
+    - Registering a pathway.
+    - Running a simulation.
+    - Accessing simulation metrics.
+
+To run this example:
+
     python _example1.py
 
-Make sure you have the necessary dependencies installed, including the `networkx` library.
+Simulation Structure:
 
-Dependencies:
-    - networkx
+    Triaged
+        ↓
+    Assessment
+        ↓
+    Treatment
 
-This example helps to illustrate the basic setup and execution of a simulation without capacity constraints, focusing
-on probabilistic patient movement through the system.
+Resources:
+
+    - triage_room (capacity = 3)
+    - assessment_room (capacity = 15)
+    - treatment_room (capacity = 10)
+
+Simulation Assumptions:
+
+    - Arrivals follow a non-homogeneous Poisson process derived
+      from the supplied hourly arrival profile.
+    - Activity durations are fixed.
+    - Patients follow a single deterministic pathway.
+    - Resource capacities constrain patient flow.
+
+Outputs:
+
+    After execution, simulation metrics are available through:
+
+        sf.metrics
+
+    This dictionary contains:
+
+        - Patient information.
+        - Resource utilisation events.
+        - Pathway completion information.
+
+This example is intended as a minimal working example before
+adding more advanced features such as branching pathways,
+stochastic activity durations, multiple pathways and
+alternative resource allocation strategies.
 """
 
-from dataclasses import dataclass, field
-
-import networkx as nx
 import numpy as np
 
-import sfttoolbox
-
-
-# This allows a standard distribution call to take in the patient object (and does nothing with it)
-@sfttoolbox.DES.distribution_wrapper
-def uniform():
-    return np.random.uniform()
-
-
-# Create a simple graph
-G = nx.DiGraph()
-G.add_edges_from(
-    [
-        ("Patient arrives", "Patient triaged"),
-        # Probabilities determine the chance of moving
-        ("Patient triaged", "Patient discharged", {"probability": 0.2}),
-        ("Patient triaged", "Appointment made", {"probability": 0.8}),
-        ("Appointment made", "Patient Treated"),
-    ]
-)
-G.add_nodes_from(
-    [
-        # Defining a distribution to generate probabilities.
-        ("Patient triaged", {"distribution": uniform})
-    ]
+from sfttoolbox.simulation import (
+    CapacityPool,
+    PathwayStep,
+    SimulationFramework,
 )
 
+centre = 12
+scale = 3
 
-# id and pathway are required attributes to match the interface for the simulation
-@dataclass
-class Patient:
-    id: int
-    pathway: list[str] = field(default_factory=list)
+patient_arrival_times = np.random.normal(
+    centre,
+    scale,
+    size=100000,
+)
 
+arrival_histogram = np.histogram(
+    patient_arrival_times,
+    bins=range(24),
+)
 
-# generate_patients is required to match the interface required for the simulation
-class PatientGenerator:
-    def __init__(self):
-        self.id = 0
+patient_pathway = [
+    PathwayStep(
+        "Triaged",
+        15,
+        "triage_room",
+    ),
+    PathwayStep(
+        "Assessment",
+        20,
+        "assessment_room",
+        "Triaged",
+    ),
+    PathwayStep("Treatment", 45, "treatment_room", "Assessment"),
+]
 
-    def generate_patients(self, day_num, day):
-        patients = []
-        if day == "Mon":
-            for _ in range(5):
-                patients.append(Patient(self.id))
-                self.id += 1
+num_patients = 150
 
-        return patients
+sf = SimulationFramework()
 
+sf.register_resource("triage_room", CapacityPool(sf.env, 3))
+sf.register_resource("assessment_room", CapacityPool(sf.env, 15))
+sf.register_resource("treatment_room", CapacityPool(sf.env, 10))
 
-if __name__ == "__main__":
-    patient_generator = PatientGenerator()
+sf.register_pathway(
+    "standard_pathway", num_patients, arrival_histogram, patient_pathway
+)
 
-    number_of_simulation_days = 10
-    sim = sfttoolbox.DES.Simulation(G, patient_generator, number_of_simulation_days)
+sf.run_simulation(60 * 24)
 
-    # Create an html file of the graph.
-    sim.plot_graph("sample_graph.html")
-    sim.run_simulation()
-
-    # We can then create a patient flow out of the discharged patients
-    G2 = nx.DiGraph()
-
-    for patient in sim.discharged_patients:
-        edges = [
-            (patient.pathway[i], patient.pathway[i + 1])
-            for i in range(len(patient.pathway) - 1)
-        ]
-
-        # Create a graph out of the discharged patient pathway
-        G2.add_edges_from(edges)
-
-        # Add colour and value attributes to the edges
-        for edge in edges:
-            G2.edges[edge]["value"] = G2.edges[edge].get("value", 0) + 1
-            G2.edges[edge]["color"] = "blue"
-
-    # Use our convenient sankey generator to view the flow
-    sfttoolbox.plotting.generate_sankey(G2)
-# %%
+# metrics can then be accessed with sf.metrics
