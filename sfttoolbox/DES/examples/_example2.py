@@ -83,7 +83,7 @@ routes, diagnostics, referrals, rework loops and discharge pathways.
 
 import numpy as np
 
-from sfttoolbox.simulation import (
+from sfttoolbox.DES import (
     CapacityPool,
     PathwayStep,
     SimulationFramework,

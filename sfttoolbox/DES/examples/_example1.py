@@ -70,7 +70,7 @@ alternative resource allocation strategies.
 
 import numpy as np
 
-from sfttoolbox.simulation import (
+from sfttoolbox.DES import (
     CapacityPool,
     PathwayStep,
     SimulationFramework,
