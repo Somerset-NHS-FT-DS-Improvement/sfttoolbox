@@ -26,7 +26,8 @@ dependencies = [
     "networkx",
     "numpy",
     "osmnx",
-    "alphashape"
+    "alphashape",
+    "simpy"
 ]
 
 [project.urls]

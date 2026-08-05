@@ -7,3 +7,4 @@ folium
 shapely
 black
 isort
+simpy
