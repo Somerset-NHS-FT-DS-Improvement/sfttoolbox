@@ -1,81 +1,57 @@
 """
-Isochrone Generation Example – Somerset, UK
-
-This example demonstrates how to generate drive-time isochrones using OpenStreetMap data and the IsochroneGenerator
-class from `sfttoolbox`. The script performs spatial analysis to compute areas reachable by car within a set travel
-time from hospitals in Somerset and Dorset counties.
-
-The main tasks covered in this example include:
-
-1. Loading road network graphs for:
-    - Yeovil (centered at lat=50.9448, lon=-2.6343, 15-mile radius)
-    - Taunton (centered at lat=51.0113, lon=-3.1207, 15-mile radius)
-
-2. Retrieving and storing the administrative boundaries of:
-    - Somerset, UK
-    - Dorset, UK
-
-3. Generating 10-minute drive-time isochrone polygons from:
-    - Musgrove Park Hospital (Taunton)
-    - Yeovil Hospital (Yeovil)
-
-4. Computing:
-    - Shortest path routes from Musgrove Park Hospital to isochrone boundary points
-    - The full road network within the 10-minute isochrone from Yeovil Hospital
-
-5. Saving all results to:
-    - A single GeoJSON file for visualisation
-    - HTML map for interactive exploration
-    - GraphML files (optional, via `save_graph`) for network analysis
-
-Dependencies:
-    - geopandas
-    - osmnx
-    - networkx
-    - alphashape
-    - shapely
-    - folium
-
-Usage:
-    1. Run this script using Python:
-        python example1.py
-
-    2. Open `isochrone_map.html` in your browser to view the interactive map.
-
-This example is useful for demonstrating how to apply spatial network analysis to healthcare accessibility or
-transport planning problems using open data and Python tooling.
+Example 1 — Isochrone Generation for Somerset and Dorset
+This example demonstrates how to generate 10‑minute drive‑time isochrones
+from two hospital locations, compute shortest paths, and visualise the
+results on an interactive Folium map.
 """
 
 import json
 
 import folium
+from shapely.geometry import shape
 
 from sfttoolbox.mapping import IsochroneGenerator
 
-# Initialise the generator
-iso_generator = IsochroneGenerator()
+# ----------------------------
+# 1. Initialise generator
+# ----------------------------
+gen = IsochroneGenerator()
 
-# Load road networks for specific locations
-iso_generator.load_graph(
-    "Yeovil", lat=50.9448, lon=-2.6343, distance=24140
-)  # 15 miles, default distance is 40 miles
-iso_generator.load_graph("Taunton", lat=51.0113, lon=-3.1207, distance=24140)
+# ----------------------------
+# 2. Load road networks
+# ----------------------------
+gen.load_graph(
+    place_name="Yeovil",
+    lat=50.9448,
+    lon=-2.6343,
+    distance=24140,  # 15 miles
+)
 
-# Store Somerset's administrative boundary
-iso_generator.generate_boundary("Somerset, UK")
+gen.load_graph(
+    place_name="Taunton",
+    lat=51.0113,
+    lon=-3.1207,
+    distance=24140,
+)
 
-# Store Dorset's administrative boundary
-iso_generator.generate_boundary("Dorset, UK")
+# ----------------------------
+# 3. Administrative boundaries
+# ----------------------------
+gen.generate_boundary("Somersetshire, UK")
+gen.generate_boundary("Dorset, UK")
 
-# Generate 10-minute drive-time isochrones
-iso_generator.generate_isochrone(
+# ----------------------------
+# 4. Isochrones (10 minutes)
+# ----------------------------
+gen.generate_isochrone(
     place_name="Taunton",
     isochrone_name="Musgrove Park Hospital",
     lat=51.0113,
     lon=-3.1207,
     drive_time=10,
-)  # 10 minutes
-iso_generator.generate_isochrone(
+)
+
+gen.generate_isochrone(
     place_name="Yeovil",
     isochrone_name="Yeovil Hospital",
     lat=50.9448,
@@ -83,33 +59,38 @@ iso_generator.generate_isochrone(
     drive_time=10,
 )
 
-# Compute shortest paths and full road network within isochrones
-iso_generator.generate_shortest_paths("Musgrove Park Hospital")
-iso_generator.convert_road_network_to_gdf("Yeovil Hospital")
+# ----------------------------
+# 5. Shortest paths & full GDF
+# ----------------------------
+gen.generate_shortest_paths("Musgrove Park Hospital")
+gen.convert_road_network_to_gdf("Yeovil Hospital")
 
-# Save results
-iso_generator.save_all_data("new_isochrone_data.geojson")
+# ----------------------------
+# 6. Save GeoJSON
+# ----------------------------
+out_path = "new_isochrone_data.geojson"
+gen.save_all_data(out_path)
 
-# Load GeoJSON data and initialise map
-with open("new_isochrone_data.geojson") as f:
+# ----------------------------
+# 7. Build interactive map
+# ----------------------------
+with open(out_path) as f:
     geojson_data = json.load(f)
 
-first_feature = geojson_data["features"][0]
-center_lat, center_lon = (
-    first_feature["geometry"]["coordinates"][0][0][1],
-    first_feature["geometry"]["coordinates"][0][0][0],
-)
-m = folium.Map(location=[center_lat, center_lon], zoom_start=9)
+# Use centroid of first feature as map centre
+first_geom = shape(geojson_data["features"][0]["geometry"])
+m = folium.Map(location=[first_geom.centroid.y, first_geom.centroid.x], zoom_start=9)
 
-# Plot each feature
-for index, feature in enumerate(geojson_data["features"]):
-    props, geometry = feature.get("properties", {}), feature["geometry"]
+# Add each feature
+for feature in geojson_data["features"]:
+    props = feature.get("properties", {})
     feature_type = props.get("type", "unknown")
-    name = props.get("name")
+    name = props.get("name", "Unnamed layer")
+
+    # colour scheme preserved
     color = "red" if feature_type == "isochrone" else "black"
 
-    fg = folium.FeatureGroup(name=name, show=True)
-
+    fg = folium.FeatureGroup(name=name)
     folium.GeoJson(
         feature,
         style_function=lambda f, col=color: {
@@ -122,12 +103,11 @@ for index, feature in enumerate(geojson_data["features"]):
 
     if feature_type == "isochrone":
         folium.Marker(
-            [props["lat"], props["lon"]], icon=folium.Icon(icon="hospital", prefix="fa")
+            [props["lat"], props["lon"]],
+            icon=folium.Icon(icon="hospital", prefix="fa"),
         ).add_to(fg)
 
     fg.add_to(m)
 
-# Add Layer Control and save the map
 folium.LayerControl(collapsed=False).add_to(m)
-
 m.save("isochrone_map.html")

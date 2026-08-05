@@ -1,3 +1,13 @@
+import functools
+import os
+
+import geopandas as gpd
+import networkx as nx
+import osmnx as ox
+import pandas as pd
+from alphashape import alphashape
+from shapely.geometry import Point, Polygon
+
 """
 Isochrone Module
 
@@ -107,7 +117,7 @@ class IsochroneGenerator:
             G = ox.graph_from_place(place_name, network_type=network_type)
 
         self.__update_graph_with_times(G)
-        self.graphs[place_name] = G
+        self.graphs[place_name] = G  # cache the graph under the provided key
         return G
 
     def __update_graph_with_times(self, G: nx.MultiDiGraph) -> None:
@@ -139,12 +149,17 @@ class IsochroneGenerator:
         Returns:
             float: Parsed speed in km/h.
         """
-        if max_speed.lower() == "none" or not max_speed.strip():
-            return self.default_speed
+        speed = max_speed
 
-        conversion = 1.60934 if "mph" in max_speed else 1
+        if not max_speed or str(max_speed).strip().lower() == "none":
+            speed = self.default_speed
+
+        ms = str(max_speed)
+        conversion = 1.60934 if "mph" in ms.lower() else 1.0
+
         try:
-            speed = int(max_speed.split()[0]) * conversion
+            token = ms.split()[0]
+            speed = float(token) * conversion
         except (ValueError, IndexError):
             speed = self.default_speed
 
@@ -228,7 +243,7 @@ class IsochroneGenerator:
                 sub_graph,
                 source=isochrone_data.centre_node,
                 target=nearest_node,
-                weight="length",
+                weight="time",
             )
             path_coords = [
                 (sub_graph.nodes[n]["x"], sub_graph.nodes[n]["y"]) for n in route

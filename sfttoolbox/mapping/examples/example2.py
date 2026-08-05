@@ -1,35 +1,56 @@
+"""
+Example 2 — Somerset Deprivation & Bus Route Map
+
+Downloads Somerset GeoJSON files (if missing), constructs a SomersetMap
+with deprivation scores, bus routes, and boundaries. Output: map.html
+"""
+
 import os
 import shutil
 import urllib.request
 import zipfile
+from pathlib import Path
 
 from sfttoolbox import mapping
 
-# Download the relevant geojson files and unzip them.
-if not os.path.exists("somerset_geojson_files"):
-    print("somerset_geojson_files folder not found, downloading.")
-    filepath, headers = urllib.request.urlretrieve(
-        "https://github.com/Somerset-NHS-FT-DS-Improvement/somerset_geojson_files/archive/refs/heads/main.zip"
+# ----------------------------
+# File paths
+# ----------------------------
+DATA_DIR = Path("somerset_geojson_files")
+SOMERSET_BOUNDARY = DATA_DIR / "somerset_boundary.geojson"
+LSOA_GEOJSON = f"{DATA_DIR}/somerset_lsoa2011.geojson"
+DEPRIVATION_CSV = f"{DATA_DIR}/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv"
+BUSROUTES_JSON = f"{DATA_DIR}/bus_routes.json"
+
+# ----------------------------
+# Download if missing
+# ----------------------------
+if not os.path.exists(DATA_DIR):
+    print("GeoJSON folder not found — downloading from GitHub.")
+    zip_path, _ = urllib.request.urlretrieve(
+        "https://github.com/Somerset-NHS-FT-DS-Improvement/"
+        "somerset_geojson_files/archive/refs/heads/main.zip"
     )
+    print("Unzipping files …")
+    with zipfile.ZipFile(zip_path, "r") as z:
+        z.extractall(".")
+    shutil.move("somerset_geojson_files-main", DATA_DIR)
 
-    print("unzipping somerset_geojson_files")
-    with zipfile.ZipFile(filepath, "r") as zip_ref:
-        zip_ref.extractall(".")
+# ----------------------------
+# Build the map
+# ----------------------------
+print("Creating Somerset map …")
+sm = mapping.SomersetMap(somerset_boundary_filepath=SOMERSET_BOUNDARY)
 
-    print("renaming somerset_geojson_files-main to somerset_geojson_files")
-    shutil.move("somerset_geojson_files-main", "somerset_geojson_files")
+sm.add_deprivation(
+    data_filepath=DEPRIVATION_CSV,
+    geo_data=LSOA_GEOJSON,
+)
 
-print("creating the map!")
-# Instantiate the map
-sm = mapping.SomersetMap()
-
-sm.add_deprivation()
-sm.add_bus_routes()
+sm.add_bus_routes(bus_routes_filepath=BUSROUTES_JSON)
 sm.add_somerset_boundary()
-
-# Allow users to switch between layers
 sm.add_layer_control()
 
-# Other functions include add_population or _create_chloropleth can be used to generate a chloropleth layer that can then be added.
-
 sm.save("map.html")
+
+print("Saved map.html")
