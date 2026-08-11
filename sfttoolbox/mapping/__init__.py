@@ -1,6 +1,7 @@
 import json
 import os
 from typing import List, Tuple
+from pathlib import Path
 
 import folium
 import geopandas as gpd
@@ -21,7 +22,7 @@ class SomersetMap:
 
     def __init__(
         self,
-        somerset_boundary_filepath="somerset_geojson_files\somerset_boundary.geojson",
+        somerset_boundary_filepath=Path("somerset_geojson_files") / "somerset_boundary.geojson",
     ) -> None:
         """
         Initialise SomersetMap with base layers and data sources.
@@ -72,7 +73,7 @@ class SomersetMap:
         self,
         selected_centers: List[str],
         travel_time: int,
-        filepath: str = "pre_run_isochrones/",
+        filepath: Path = Path("pre_run_isochrones"),
     ) -> dict:
         """
         Generate isochrones for selected centers.
@@ -89,10 +90,11 @@ class SomersetMap:
 
         for hospital_name in selected_centers:
             isochrone_filename = (
-                f"{filepath}{hospital_name}_{travel_time}_min_isochrone.geojson"
+                Path(filepath)
+                / f"{hospital_name}_{travel_time}_min_isochrone.geojson"
             )
 
-            if os.path.isfile(isochrone_filename):
+            if isochrone_filename.is_file():
                 isochrone_dict[hospital_name] = gpd.read_file(isochrone_filename)
 
             else:
@@ -111,7 +113,7 @@ class SomersetMap:
         self,
         selected_centers: List[str],
         travel_time: int,
-        filepath: str = "pre_run_isochrones/",
+        filepath: Path = Path("pre_run_isochrones"),
         icon_background_colour: str = "lightblue",
         colour: str = "white",
         group_prefix: str = "",
@@ -157,7 +159,10 @@ class SomersetMap:
             ).add_to(isochrone_group)
 
     def add_bus_routes(
-        self, bus_routes_filepath: str = "somerset_geojson_files/bus_routes.json"
+        self, 
+        bus_routes_filepath: Path = (
+            Path("somerset_geojson_files") / "bus_routes.json"
+        )
     ) -> None:
         """
         Add bus routes to the map.
@@ -200,8 +205,14 @@ class SomersetMap:
 
     def add_deprivation(
         self,
-        geo_data: str = "somerset_geojson_files\somerset_lsoa2011.geojson",
-        data_filepath: str = "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
+        geo_data: Path = (
+            Path("somerset_geojson_files") / "somerset_lsoa2011.geojson"
+        ),
+        
+        data_filepath: Path = (
+            Path("somerset_geojson_files")
+            / "File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv"
+        ),
         columns: List[str] = [
             "LSOA code (2011)",
             "Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)",
@@ -228,8 +239,15 @@ class SomersetMap:
 
     def add_population(
         self,
-        geo_data: str = "somerset_geojson_files\somerset_lsoa2011.geojson",
-        data_filepath: str = "somerset_geojson_files\File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv",
+        geo_data: Path = (
+            Path("somerset_geojson_files")
+            / "somerset_lsoa2011.geojson"
+        ),
+        
+        data_filepath: Path = (
+            Path("somerset_geojson_files")
+            / "File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv"
+        ),
         columns: List[str] = [
             "LSOA code (2011)",
             "Total population: mid 2015 (excluding prisoners)",
