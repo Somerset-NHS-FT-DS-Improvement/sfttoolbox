@@ -6,5 +6,5 @@ geopandas
 folium
 shapely
 black
-isort
+isort==8.0.1
 simpy
