@@ -862,7 +862,8 @@ class SimulationFramework:
                     prev_resource.release(prev_req)
 
                     self.metrics[f"{prev_label}_used"].append((self.env.now, -1))
-
+                    
+                patient.pathway.append((f"Released {prev_label}", env.now))
                 patient.discharge_time = self.env.now
                 break
 
@@ -871,14 +872,17 @@ class SimulationFramework:
             logging.info(f"Patient {patient.id} requesting " f"{resource_label}")
 
             req = resource.request(patient)
+            patient.pathway.append((f"Requested {resource_label}", env.now))
             yield req
-
+            
+            patient.pathway.append((f"Obtained {resource_label}", env.now))
             self.metrics[f"{resource_label}_used"].append((self.env.now, 1))
 
             if prev_resource is not None:
                 prev_resource.release(prev_req)
 
                 self.metrics[f"{prev_label}_used"].append((self.env.now, -1))
+                patient.pathway.append((f"Released {prev_label}", env.now))
 
             logging.info(f"Patient {patient.id} waiting for " f"{wait_duration}")
 
