@@ -321,7 +321,9 @@ class Pathway:
             node = self.start_node
             wait_duration = self._get_duration(node)
             resource_label = self.pathway_graph.nodes[node]["resource_label"]
-            release_on_completion_label = self.pathway_graph.nodes[node]["release_on_completion_label"]
+            release_on_completion_label = self.pathway_graph.nodes[node][
+                "release_on_completion_label"
+            ]
         else:
             nodes_and_weights = [
                 *zip(
@@ -337,7 +339,9 @@ class Pathway:
                 node = str(self.choice_rng.choice(nodes, p=weights))
                 wait_duration = self._get_duration(node)
                 resource_label = self.pathway_graph.nodes[node]["resource_label"]
-                release_on_completion_label = self.pathway_graph.nodes[node]["release_on_completion_label"]
+                release_on_completion_label = self.pathway_graph.nodes[node][
+                    "release_on_completion_label"
+                ]
             else:
                 # last node
                 node = None
@@ -647,65 +651,67 @@ class CapacityPool(ResourcePool):
         """
         return self.resource.release(allocation)
 
+
 class ShiftCapacityPool(ResourcePool):
     """
     Resource pool with capacity that varies over time according to a rota.
-     
+
     This resource is implemented using a SimPy ``Container`` where the
     container level represents currently available capacity. Capacity
     changes are applied according to a repeating rota schedule.
-     
+
     Capacity increases are applied immediately. Capacity reductions are
     applied asynchronously and may be delayed if all capacity is currently
     in use. This allows activities already in progress to continue while
     preventing replacement of released capacity.
-     
+
     Attributes:
     rota (list[tuple[float, int]]):
     Sequence of ``(time, capacity)`` tuples defining the rota
     within each cycle. Times are measured from the start of the
     cycle.
-     
+
     cycle_length (int):
     Duration of a complete rota cycle in simulation time units.
     Defaults to 24 hours expressed in minutes.
-     
+
     env (simpy.Environment):
     Simulation environment.
-     
+
     current_capacity (int):
     Scheduled capacity currently in effect.
-     
+
     resource (simpy.Container):
     Underlying SimPy container representing available capacity.
     """
+
     def __init__(
         self,
         env: simpy.Environment,
         rota: list[tuple[float, int]],
-        cycle_length: int = 24*60
+        cycle_length: int = 24 * 60,
     ) -> None:
         """
         Create a shift-based capacity pool.
-         
+
         Args:
             env:
                 Simulation environment.
-         
+
             rota:
                 List of ``(time, capacity)`` tuples defining the rota.
                 Times should be specified relative to the start of the
                 cycle and ordered chronologically.
-         
+
                 Example::
-                 
+
                 [
                     (0, 1),
                     (8 * 60, 3),
                     (17 * 60, 2),
                     (22 * 60, 1),
                 ]
-         
+
             cycle_length:
                 Length of the rota cycle. Defaults to one day
                 (24 hours expressed in minutes).
@@ -720,59 +726,57 @@ class ShiftCapacityPool(ResourcePool):
             self.current_capacity = self.rota[0][1]
         else:
             self.current_capacity = self.rota[-1][1]
-            
+
         self.resource = simpy.Container(
-            env,
-            capacity = max_capacity,
-            init = self.current_capacity
+            env, capacity=max_capacity, init=self.current_capacity
         )
 
         self.env.process(self._rota_controller())
-        
+
     def _rota_controller(self) -> simpy.events.Process:
         """
         Apply rota changes as simulation time advances.
-         
+
         The rota is treated as cyclic. At each change point the scheduled
         capacity is updated and the process waits until the next rota
         transition.
-         
+
         Yields:
             simpy.events.Timeout:
             Timeout until the next rota change point.
         """
         times = [r[0] for r in self.rota]
-        
+
         while True:
             # find where the time is in the rota
             cycle, time = divmod(self.env.now, self.cycle_length)
 
-            time_index = np.searchsorted(times, time, side='right')
-            if time_index <= len(times)-1:
-                new_capacity = self.rota[time_index-1][1]
+            time_index = np.searchsorted(times, time, side="right")
+            if time_index <= len(times) - 1:
+                new_capacity = self.rota[time_index - 1][1]
                 wait_time = self.rota[time_index][0] - time
             else:
-                
-                new_capacity = self.rota[time_index-1][1]
+
+                new_capacity = self.rota[time_index - 1][1]
 
                 # wait time falls off the end of the schedule, assume it wraps around at the next cycle point
-                wait_time = self.cycle_length - self.rota[time_index -1][0]
-                
+                wait_time = self.cycle_length - self.rota[time_index - 1][0]
+
             self._alter_capacity(new_capacity)
 
             yield self.env.timeout(wait_time)
-            
+
     def _alter_capacity(self, new_capacity) -> None:
         """
         Adjust available capacity to match a new rota value.
-         
+
         Capacity increases are applied immediately.
-         
+
         Capacity reductions are handled asynchronously because some or all
         of the capacity being removed may currently be in use. In such
         cases the reduction process waits until sufficient capacity is
         released.
-         
+
         Args:
             new_capacity:
                 New scheduled capacity.
@@ -790,30 +794,30 @@ class ShiftCapacityPool(ResourcePool):
     def _reduce_capacity(self, amount) -> simpy.events.Process:
         """
         Reduce available capacity.
-         
+
         If insufficient capacity is currently available, this process
         waits until enough capacity has been released before removing it
         from the pool.
-         
+
         Args:
             amount:
                 Amount of capacity to remove.
-         
+
         Yields:
             simpy.events.Event:
                 Event which completes when the capacity becomes available
                 for removal.
         """
         yield self.resource.get(amount)
-        
+
     def request(self, patient) -> simpy.events.Event:
         """
         Request one unit of capacity.
-         
+
         Args:
             patient:
                 Patient requesting access to the resource.
-         
+
         Returns:
             simpy.events.Event:
                 Event which succeeds when capacity becomes available.
@@ -823,13 +827,13 @@ class ShiftCapacityPool(ResourcePool):
     def release(self, prev_res) -> simpy.events.Event:
         """
         Release one unit of previously allocated capacity.
-         
+
         Args:
             allocation:
                 Allocation token. Present for compatibility with the
                 ``ResourcePool`` interface but ignored by this
                 implementation.
-             
+
         Returns:
             simpy.events.Event:
                 Event representing the capacity being returned to the
