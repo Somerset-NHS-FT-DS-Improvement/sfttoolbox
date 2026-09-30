@@ -174,6 +174,7 @@ __all__ = [
     "PathwayInformation",
     "ResourcePool",
     "CapacityPool",
+    "ShiftCapacityPool",
     "InterarrivalCalculator",
     "SimulationFramework",
 ]
@@ -220,6 +221,7 @@ class PathwayStep:
         resource_label (str): Name of the resource required for this step.
         prev_step (Optional[str]): Name of the predecessor step.
         probability (float): Probability of selecting this step from its predecessor.
+        release_on_completion (bool): Whether to release the resource after use of wait until the next resource is free
     """
 
     name: str
@@ -227,6 +229,7 @@ class PathwayStep:
     resource_label: str
     prev_step: Optional[str] = None
     probability: float = 1.0
+    release_on_completion: bool = False
 
 
 @dataclass
@@ -275,7 +278,11 @@ class Pathway:
         for step in self.pathway:
             node = (
                 step.name,
-                {"duration": step.duration, "resource_label": step.resource_label},
+                {
+                    "duration": step.duration,
+                    "resource_label": step.resource_label,
+                    "release_on_completion_label": step.release_on_completion,
+                },
             )
             edge = (step.prev_step, step.name, {"probability": step.probability})
 
@@ -306,14 +313,17 @@ class Pathway:
             current_node (Optional[str]): Current node occupied by the patient.
 
         Returns:
-            tuple[Optional[str], Optional[str], float]:
-                The next node, resource name and duration associated with the step.
+            tuple[Optional[str], Optional[str], float, bool]:
+                The next node, resource name, duration and relese protocol associated with the step.
         """
         if current_node is None:
             # first node
             node = self.start_node
             wait_duration = self._get_duration(node)
             resource_label = self.pathway_graph.nodes[node]["resource_label"]
+            release_on_completion_label = self.pathway_graph.nodes[node][
+                "release_on_completion_label"
+            ]
         else:
             nodes_and_weights = [
                 *zip(
@@ -329,13 +339,17 @@ class Pathway:
                 node = str(self.choice_rng.choice(nodes, p=weights))
                 wait_duration = self._get_duration(node)
                 resource_label = self.pathway_graph.nodes[node]["resource_label"]
+                release_on_completion_label = self.pathway_graph.nodes[node][
+                    "release_on_completion_label"
+                ]
             else:
                 # last node
                 node = None
                 wait_duration = 0
                 resource_label = None
+                release_on_completion_label = True
 
-        return node, resource_label, wait_duration
+        return node, resource_label, wait_duration, release_on_completion_label
 
     def _get_duration(self, node: str) -> float:
         """
@@ -555,7 +569,7 @@ class ResourcePool(ABC):
     """
 
     @abstractmethod
-    def request(self, patient: Patient) -> Any:
+    def request(self, patient: Patient) -> simpy.events.Event:
         """
         Request a resource allocation.
 
@@ -563,15 +577,16 @@ class ResourcePool(ABC):
             patient (Patient): Patient requesting access.
 
         Returns:
-            Any: Allocation token used during release.
+            simpy.events.Event: SimPy request event that can be yielded
+                until the resource becomes available.
         """
-        pass
+        return self.resource.request()
 
     @abstractmethod
     def release(
         self,
         allocation: Any,
-    ) -> None:
+    ) -> simpy.events.Event:
         """
         Release a previously allocated resource.
 
@@ -579,9 +594,10 @@ class ResourcePool(ABC):
             allocation (Any): Allocation token returned by the request method.
 
         Returns:
-            None: Resource is released back to the pool.
+            simpy.events.Event: SimPy request event that can be yielded
+                until the resource is released.
         """
-        self.resource.release(allocation)
+        return self.resource.release(allocation)
 
 
 class CapacityPool(ResourcePool):
@@ -630,10 +646,200 @@ class CapacityPool(ResourcePool):
                 method when the resource was acquired.
 
         Returns:
-            None: Resource is returned to the pool and becomes available
-                to other waiting patients.
+            simpy.events.Event: SimPy request event that can be yielded
+                until the resource is released.
         """
-        self.resource.release(allocation)
+        return self.resource.release(allocation)
+
+
+class ShiftCapacityPool(ResourcePool):
+    """
+    Resource pool with capacity that varies over time according to a rota.
+
+    This resource is implemented using a SimPy ``Container`` where the
+    container level represents currently available capacity. Capacity
+    changes are applied according to a repeating rota schedule.
+
+    Capacity increases are applied immediately. Capacity reductions are
+    applied asynchronously and may be delayed if all capacity is currently
+    in use. This allows activities already in progress to continue while
+    preventing replacement of released capacity.
+
+    Attributes:
+    rota (list[tuple[float, int]]):
+    Sequence of ``(time, capacity)`` tuples defining the rota
+    within each cycle. Times are measured from the start of the
+    cycle.
+
+    cycle_length (int):
+    Duration of a complete rota cycle in simulation time units.
+    Defaults to 24 hours expressed in minutes.
+
+    env (simpy.Environment):
+    Simulation environment.
+
+    current_capacity (int):
+    Scheduled capacity currently in effect.
+
+    resource (simpy.Container):
+    Underlying SimPy container representing available capacity.
+    """
+
+    def __init__(
+        self,
+        env: simpy.Environment,
+        rota: list[tuple[float, int]],
+        cycle_length: int = 24 * 60,
+    ) -> None:
+        """
+        Create a shift-based capacity pool.
+
+        Args:
+            env:
+                Simulation environment.
+
+            rota:
+                List of ``(time, capacity)`` tuples defining the rota.
+                Times should be specified relative to the start of the
+                cycle and ordered chronologically.
+
+                Example::
+
+                [
+                    (0, 1),
+                    (8 * 60, 3),
+                    (17 * 60, 2),
+                    (22 * 60, 1),
+                ]
+
+            cycle_length:
+                Length of the rota cycle. Defaults to one day
+                (24 hours expressed in minutes).
+        """
+        self.rota = sorted(rota)
+        self.cycle_length = cycle_length
+        self.env = env
+
+        max_capacity = max(rota, key=lambda r: r[1])[1]
+
+        if self.rota[0][0] == 0:
+            self.current_capacity = self.rota[0][1]
+        else:
+            self.current_capacity = self.rota[-1][1]
+
+        self.resource = simpy.Container(
+            env, capacity=max_capacity, init=self.current_capacity
+        )
+
+        self.env.process(self._rota_controller())
+
+    def _rota_controller(self) -> simpy.events.Process:
+        """
+        Apply rota changes as simulation time advances.
+
+        The rota is treated as cyclic. At each change point the scheduled
+        capacity is updated and the process waits until the next rota
+        transition.
+
+        Yields:
+            simpy.events.Timeout:
+            Timeout until the next rota change point.
+        """
+        times = [r[0] for r in self.rota]
+
+        while True:
+            # find where the time is in the rota
+            cycle, time = divmod(self.env.now, self.cycle_length)
+
+            time_index = np.searchsorted(times, time, side="right")
+            if time_index <= len(times) - 1:
+                new_capacity = self.rota[time_index - 1][1]
+                wait_time = self.rota[time_index][0] - time
+            else:
+
+                new_capacity = self.rota[time_index - 1][1]
+
+                # wait time falls off the end of the schedule, assume it wraps around at the next cycle point
+                wait_time = self.cycle_length - self.rota[time_index - 1][0]
+
+            self._alter_capacity(new_capacity)
+
+            yield self.env.timeout(wait_time)
+
+    def _alter_capacity(self, new_capacity) -> None:
+        """
+        Adjust available capacity to match a new rota value.
+
+        Capacity increases are applied immediately.
+
+        Capacity reductions are handled asynchronously because some or all
+        of the capacity being removed may currently be in use. In such
+        cases the reduction process waits until sufficient capacity is
+        released.
+
+        Args:
+            new_capacity:
+                New scheduled capacity.
+        """
+        difference = new_capacity - self.current_capacity
+
+        if difference > 0:
+            self.resource.put(difference)
+        elif difference < 0:
+            # may need to wait if the resource is in use (overtime?)
+            self.env.process(self._reduce_capacity(abs(difference)))
+
+        self.current_capacity = new_capacity
+
+    def _reduce_capacity(self, amount) -> simpy.events.Process:
+        """
+        Reduce available capacity.
+
+        If insufficient capacity is currently available, this process
+        waits until enough capacity has been released before removing it
+        from the pool.
+
+        Args:
+            amount:
+                Amount of capacity to remove.
+
+        Yields:
+            simpy.events.Event:
+                Event which completes when the capacity becomes available
+                for removal.
+        """
+        yield self.resource.get(amount)
+
+    def request(self, patient) -> simpy.events.Event:
+        """
+        Request one unit of capacity.
+
+        Args:
+            patient:
+                Patient requesting access to the resource.
+
+        Returns:
+            simpy.events.Event:
+                Event which succeeds when capacity becomes available.
+        """
+        return self.resource.get(1)
+
+    def release(self, prev_res) -> simpy.events.Event:
+        """
+        Release one unit of previously allocated capacity.
+
+        Args:
+            allocation:
+                Allocation token. Present for compatibility with the
+                ``ResourcePool`` interface but ignored by this
+                implementation.
+
+        Returns:
+            simpy.events.Event:
+                Event representing the capacity being returned to the
+                pool.
+        """
+        return self.resource.put(1)
 
 
 class InterarrivalCalculator:
@@ -852,7 +1058,7 @@ class SimulationFramework:
         prev_req = None
 
         while True:
-            current_node, resource_label, wait_duration = (
+            current_node, resource_label, wait_duration, release_on_completion = (
                 pathway_info.pathway.find_next_step(current_node)
             )
 
@@ -888,6 +1094,15 @@ class SimulationFramework:
 
             yield self.env.timeout(wait_duration)
 
-            prev_req = req
-            prev_resource = resource
-            prev_label = resource_label
+            if release_on_completion:
+                prev_resource = None
+                prev_req = None
+                prev_label = None
+
+                resource.release(req)
+                self.metrics[f"{resource_label}_used"].append((self.env.now, -1))
+                patient.pathway.append((f"Released {resource_label}", self.env.now))
+            else:
+                prev_req = req
+                prev_resource = resource
+                prev_label = resource_label
