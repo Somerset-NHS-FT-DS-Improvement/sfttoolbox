@@ -22,7 +22,7 @@ def close_matplotlib_figures():
 def mock_team_colours(monkeypatch):
     """Provide deterministic colours without depending on toolbox configuration."""
     monkeypatch.setattr(
-        analysis_module.sfttoolbox,
+        sfttoolbox,
         "team_colours",
         {
             "blue": {"hex": "#0072B2"},
