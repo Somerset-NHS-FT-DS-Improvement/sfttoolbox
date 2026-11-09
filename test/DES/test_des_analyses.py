@@ -18,20 +18,6 @@ def close_matplotlib_figures():
     plt.close("all")
 
 
-@pytest.fixture(autouse=True)
-def mock_team_colours(monkeypatch):
-    """Provide deterministic colours without depending on toolbox configuration."""
-    monkeypatch.setattr(
-        sfttoolbox,
-        "team_colours",
-        {
-            "blue": {"hex": "#0072B2"},
-            "orange": {"hex": "#E69F00"},
-            "green": {"hex": "#009E73"},
-        },
-    )
-
-
 def make_simulation(now, **metrics):
     """Create a minimal simulation-framework test double."""
     return SimpleNamespace(
