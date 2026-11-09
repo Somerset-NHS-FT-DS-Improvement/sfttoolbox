@@ -1,4 +1,4 @@
-""" Simulation Example 4: Rota-Based Staffing with Multiple Replications
+"""Simulation Example 4: Rota-Based Staffing with Multiple Replications
 
 This example demonstrates rota-based staffing resources using ShiftCapacityPool and shows how resource utilisation can be analysed across multiple simulation replications.
 
@@ -98,10 +98,8 @@ To run this example:
 
 python _example4.py
 
-This example extends rota-based workforce modelling to stochastic experimentation across multiple simulation replications. It provides a basis for exploring staffing requirements, resource utilisation, uncertainty, skills, continuity of care and alternative rota designs. 
+This example extends rota-based workforce modelling to stochastic experimentation across multiple simulation replications. It provides a basis for exploring staffing requirements, resource utilisation, uncertainty, skills, continuity of care and alternative rota designs.
 """
-
-
 
 import numpy as np
 
