@@ -96,8 +96,8 @@ import numpy as np
 from sfttoolbox.DES import (
     PathwayStep,
     ShiftCapacityPool,
+    SimulationAnalyses,
     SimulationFramework,
-    SimulationAnalyses
 )
 
 centre = 12
@@ -149,12 +149,12 @@ sim_runtime = 60 * 48
 num_patients = 40
 
 n_runs = 100
-seeds = np.random.SeedSequence(42).generate_state(n_runs *2).reshape(-1, 2)
+seeds = np.random.SeedSequence(42).generate_state(n_runs * 2).reshape(-1, 2)
 sims = []
 
 for seed_collection in seeds:
     sf = SimulationFramework()
-    
+
     sf.register_resource(
         "doctor",
         ShiftCapacityPool(
@@ -162,7 +162,7 @@ for seed_collection in seeds:
             rota,
         ),
     )
-    
+
     sf.register_resource(
         "nurse",
         ShiftCapacityPool(
@@ -170,14 +170,14 @@ for seed_collection in seeds:
             rota,
         ),
     )
-    
+
     sf.register_pathway(
         "standard_pathway",
         num_patients,
         arrival_histogram,
         patient_pathway,
-        seed1 = seed_collection[0],
-        seed2 = seed_collection[1]
+        seed1=seed_collection[0],
+        seed2=seed_collection[1],
     )
 
     sf.run_simulation(sim_runtime)
@@ -185,6 +185,9 @@ for seed_collection in seeds:
     sims.append(sf)
 
 sa = SimulationAnalyses(sims)
-dfs = [sa.create_resource_dataframe("doctor_used"), sa.create_resource_dataframe("nurse_used")]
+dfs = [
+    sa.create_resource_dataframe("doctor_used"),
+    sa.create_resource_dataframe("nurse_used"),
+]
 
 _ = sa.plot_resource_usage(dfs, labels=["doctor", "nurse"])
