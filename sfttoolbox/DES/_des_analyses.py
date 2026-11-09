@@ -35,15 +35,16 @@ Classes:
         discrete-event simulation runs.
 """
 
-
 __all__ = [
     "SimulationAnalyses",
 ]
 
-import pandas as pd
-import sfttoolbox
 import math
+
+import pandas as pd
 from matplotlib import pyplot as plt
+
+import sfttoolbox
 
 
 class SimulationAnalyses:
@@ -101,9 +102,7 @@ class SimulationAnalyses:
         if isinstance(self.sf, list):
             dfs = []
             for i, sf in enumerate(self.sf):
-                df = self._create_resource_dataframe_single_sim(
-                    sf.metrics[col], col
-                )
+                df = self._create_resource_dataframe_single_sim(sf.metrics[col], col)
                 df = (
                     df.set_index("Time")
                     .reindex(range(self.final_time_mins + 1))["cumsum"]
@@ -169,20 +168,23 @@ class SimulationAnalyses:
             matplotlib.figure.Figure: The generated matplotlib figure.
         """
         colors = [
-            sfttoolbox.team_colours[c]["hex"]
-            for c in sfttoolbox.team_colours.keys()
+            sfttoolbox.team_colours[c]["hex"] for c in sfttoolbox.team_colours.keys()
         ]
 
         if labels == None:
             labels = [f"Resource {i + 1}" for i in range(len(dfs))]
 
         if isinstance(self.sf, list):
-            ax = dfs[0].quantile(0.5, axis=1).plot(
-                figsize=(20, 10),
-                color=colors[0],
-                alpha=0.8,
-                linewidth=3,
-                label=labels[0],
+            ax = (
+                dfs[0]
+                .quantile(0.5, axis=1)
+                .plot(
+                    figsize=(20, 10),
+                    color=colors[0],
+                    alpha=0.8,
+                    linewidth=3,
+                    label=labels[0],
+                )
             )
             ax.fill_between(
                 x=dfs[0].index,
