@@ -1,95 +1,107 @@
-"""
-Simulation Example 3
+""" Simulation Example 4: Rota-Based Staffing with Multiple Replications
 
-This example demonstrates the use of rota-based staffing resources
-using the ``ShiftCapacityPool``.
+This example demonstrates rota-based staffing resources using ShiftCapacityPool and shows how resource utilisation can be analysed across multiple simulation replications.
 
-Patients arrive throughout the day according to a time-varying arrival
-profile and progress through a simple clinical pathway consisting of:
+Patients arrive according to a time-varying arrival profile and progress through a simple clinical pathway:
 
-    Doctor triage
-        ↓
-    Nurse treatment
-        ↓
-    Doctor summary
+Doctor triage
+    ↓
+Nurse treatment
+    ↓
+Doctor summary
 
-Unlike the previous examples, resources are not available continuously.
-Instead, both doctors and nurses follow a daily staffing rota with
-capacity changing throughout the day.
+Unlike resources with constant capacity, the doctors and nurses in this example follow a daily staffing rota. Resource capacity therefore changes throughout the simulated day and the rota repeats every 24 hours.
 
 The example illustrates:
 
-    - Creating rota-based resources using ShiftCapacityPool.
-    - Modelling workforce availability that varies by time of day.
-    - Reusing the same staff resource at multiple points in a pathway.
-    - Releasing staff when activities complete using
-      ``release_on_completion=True``.
-    - Running simulations over multiple days with cyclic staffing
-      patterns.
-    - Collecting utilisation and patient pathway metrics.
-
-To run this example:
-
-    python _example3.py
+- Creating rota-based resources using ``ShiftCapacityPool``.
+- Modelling workforce availability that varies by time of day.
+- Reusing the same staff resource at multiple points in a pathway.
+- Releasing staff after activities using
+  ``release_on_completion=True``.
+- Running simulations over multiple days with cyclic staffing patterns.
+- Running multiple independent simulation replications.
+- Using reproducible random seeds for each replication.
+- Combining resource utilisation results across replications.
+- Visualising median resource utilisation and its uncertainty across
+  replications using ``SimulationAnalyses``.
 
 Pathway Structure:
 
-    Doctor triage
-        ↓
-    Nurse treatment
-        ↓
-    Doctor summary
+Doctor triage
+    ↓
+Nurse treatment
+    ↓
+Doctor summary
 
 Staff Rotas:
 
-    Doctors:
+Doctors and nurses:
 
-        08:00 - 10:00 : 1 doctor
-        10:00 - 14:00 : 4 doctors
-        14:00 - 18:00 : 2 doctors
-        18:00 - 08:00 : 0 doctors
-
-    Nurses:
-
-        08:00 - 10:00 : 1 nurse
-        10:00 - 14:00 : 4 nurses
-        14:00 - 18:00 : 2 nurses
-        18:00 - 08:00 : 0 nurses
+    08:00 - 10:00 : capacity 1
+    10:00 - 14:00 : capacity 4
+    14:00 - 18:00 : capacity 2
+    18:00 - 08:00 : capacity 0
 
 Resources:
 
-    - doctor (ShiftCapacityPool)
-    - nurse (ShiftCapacityPool)
+- doctor (ShiftCapacityPool)
+- nurse (ShiftCapacityPool)
+
+Simulation Configuration:
+
+- Simulation duration: 48 hours.
+- Number of patients per replication: 40.
+- Number of simulation replications: 100.
+- Each replication receives two reproducible random seeds generated
+  from a NumPy ``SeedSequence`` initialised with seed 42.
+- The same staffing rota is used for doctors and nurses.
+- Staffing levels repeat every 24 hours.
 
 Simulation Assumptions:
 
-    - Arrivals follow a non-homogeneous Poisson process derived
-      from the supplied hourly arrival profile.
-    - Activity durations are fixed.
-    - Staff are released immediately after activity completion.
-    - Staffing levels repeat every 24 hours.
-    - Capacity reductions may be delayed if staff are currently
-      engaged in activities, representing completion of work
-      already in progress.
+- Arrivals follow a non-homogeneous Poisson process derived from the
+  supplied hourly arrival profile.
+- The arrival profile is generated from a normal distribution centred
+  around midday.
+- Activity durations are fixed.
+- Staff are released immediately after activity completion.
+- Capacity reductions may be delayed while staff are engaged in
+  activities, allowing work already in progress to complete.
+
+Analysis:
+
+Each completed ``SimulationFramework`` instance is stored and passed
+to ``SimulationAnalyses``.
+
+Resource utilisation data are generated separately for doctors and
+nurses using ``create_resource_dataframe``. The replications are aligned
+onto a common simulation-time index before being plotted.
+
+``plot_resource_usage`` summarises utilisation across the simulation
+replications using the median and a 95% percentile interval.
 
 Outputs:
 
-    After execution, simulation metrics are available through:
+Metrics for each individual simulation remain available through:
 
-        sf.metrics
+    sf.metrics
 
-    This dictionary contains:
+The collection of completed simulation replications is stored in:
 
-        - Patient arrival and discharge information.
-        - Staff utilisation events.
-        - Resource request and allocation timings.
-        - Detailed patient pathway progression records.
+    sims
 
-This example demonstrates the transition from room-based modelling
-towards workforce modelling and forms the basis for more advanced
-representations of staffing, skills, continuity of care and rota
-planning.
+The final plot compares doctor and nurse utilisation across all
+replications.
+
+To run this example:
+
+python _example4.py
+
+This example extends rota-based workforce modelling to stochastic experimentation across multiple simulation replications. It provides a basis for exploring staffing requirements, resource utilisation, uncertainty, skills, continuity of care and alternative rota designs. 
 """
+
+
 
 import numpy as np
 
