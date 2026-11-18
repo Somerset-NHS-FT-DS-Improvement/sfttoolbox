@@ -499,7 +499,7 @@ class ArrivalProfile:
             self.arrival_histogram[0]
             / self.arrival_histogram[0].sum()
             * self.num_patients
-        ).round()
+        )#.round()
         arrival_rate = mean_num_patients / 60
 
         lambda_max = arrival_rate.max()
@@ -719,6 +719,7 @@ class ShiftCapacityPool(ResourcePool):
         self.rota = sorted(rota)
         self.cycle_length = cycle_length
         self.env = env
+        self.pending_reduction = 0
 
         max_capacity = max(rota, key=lambda r: r[1])[1]
 
@@ -768,78 +769,119 @@ class ShiftCapacityPool(ResourcePool):
 
     def _alter_capacity(self, new_capacity) -> None:
         """
-        Adjust available capacity to match a new rota value.
-
-        Capacity increases are applied immediately.
-
-        Capacity reductions are handled asynchronously because some or all
-        of the capacity being removed may currently be in use. In such
-        cases the reduction process waits until sufficient capacity is
-        released.
-
+        Adjust the resource pool to match a new scheduled capacity.
+    
+        Capacity increases first cancel any outstanding pending reductions.
+        Any remaining increase is added to the underlying container as
+        immediately available capacity.
+    
+        Capacity reductions remove currently available capacity immediately.
+        If the required reduction is greater than the capacity currently
+        available, the remainder is recorded as a pending reduction. Pending
+        reductions are applied as resources are subsequently released, allowing
+        activities already in progress to complete without making their capacity
+        available to waiting requests.
+    
         Args:
             new_capacity:
-                New scheduled capacity.
+                New scheduled capacity specified by the rota.
         """
         difference = new_capacity - self.current_capacity
 
         if difference > 0:
-            self.resource.put(difference)
+            if difference >= self.pending_reduction:
+                left_over = difference - self.pending_reduction
+                self.pending_reduction = 0
+                if difference - self.resource.level > 0:
+                    self.resource.put(left_over)
+            else:
+                self.pending_reduction -= difference
+            
         elif difference < 0:
-            # may need to wait if the resource is in use (overtime?)
-            self.env.process(self._reduce_capacity(abs(difference)))
+            if abs(difference) > self.resource.level:
+                left_over = abs(difference) - self.resource.level
+                if self.resource.level != 0:
+                    self.resource.get(self.resource.level)
+                self._reduce_capacity(left_over)
+            elif abs(difference) <= self.resource.level:
+                self.resource.get(abs(difference))
 
         self.current_capacity = new_capacity
 
-    def _reduce_capacity(self, amount) -> simpy.events.Process:
+    def _reduce_capacity(self, amount) -> None:
         """
-        Reduce available capacity.
-
-        If insufficient capacity is currently available, this process
-        waits until enough capacity has been released before removing it
-        from the pool.
-
+        Record a capacity reduction that cannot be applied immediately.
+    
+        This method is used when some of the capacity being removed is
+        currently in use. Rather than placing a reduction request in the
+        container's get queue, the outstanding amount is recorded as a
+        pending reduction.
+    
+        As units are subsequently released, they are retired from the pool
+        until the pending reduction has been satisfied. This prevents released
+        capacity from being allocated to waiting requests when it should no
+        longer be available under the current rota.
+    
         Args:
             amount:
-                Amount of capacity to remove.
-
-        Yields:
-            simpy.events.Event:
-                Event which completes when the capacity becomes available
-                for removal.
+                Number of currently unavailable units that must be removed
+                from the pool when they are released.
         """
-        yield self.resource.get(amount)
+        self.pending_reduction += amount
 
     def request(self, patient) -> simpy.events.Event:
         """
-        Request one unit of capacity.
-
+        Request one unit of currently available capacity.
+    
+        The request is submitted to the underlying SimPy container. If a unit
+        is immediately available, the event succeeds immediately. Otherwise,
+        the request waits in the container's get queue until capacity becomes
+        available.
+    
         Args:
             patient:
-                Patient requesting access to the resource.
-
+                Patient requesting access to the resource. The patient is
+                accepted for compatibility with the ``ResourcePool`` interface
+                but is not used when allocating container capacity.
+    
         Returns:
             simpy.events.Event:
-                Event which succeeds when capacity becomes available.
+                Container get event that succeeds when one unit of capacity
+                has been allocated.
         """
         return self.resource.get(1)
 
     def release(self, prev_res) -> simpy.events.Event:
         """
         Release one unit of previously allocated capacity.
-
+    
+        If a capacity reduction is pending, the released unit is retired from
+        the pool by decrementing ``pending_reduction`` rather than being
+        returned to the underlying container. This allows work already in
+        progress to finish after a rota reduction without allowing another
+        waiting request to take the released capacity.
+    
+        If no reduction is pending, the unit is returned to the container and
+        becomes available to waiting requests.
+    
         Args:
-            allocation:
-                Allocation token. Present for compatibility with the
-                ``ResourcePool`` interface but ignored by this
-                implementation.
-
+            prev_res:
+                Allocation event associated with the previous request. Present
+                for compatibility with the ``ResourcePool`` interface but not
+                required by this implementation.
+    
         Returns:
             simpy.events.Event:
-                Event representing the capacity being returned to the
-                pool.
+                An immediately succeeded event when the released unit satisfies
+                a pending reduction, otherwise a container put event representing
+                the capacity being returned to the available pool.
         """
-        return self.resource.put(1)
+        if self.pending_reduction > 0:
+            self.pending_reduction -= 1
+            event = self.env.event().succeed()
+        else:
+            event = self.resource.put(1)
+        return event
 
 
 class InterarrivalCalculator:
