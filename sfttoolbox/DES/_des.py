@@ -788,23 +788,23 @@ class ShiftCapacityPool(ResourcePool):
         """
         difference = new_capacity - self.current_capacity
 
+        # add new capacity by either putting more or removing any pending reductions
         if difference > 0:
-            if difference >= self.pending_reduction:
-                left_over = difference - self.pending_reduction
-                self.pending_reduction = 0
-                if left_over > 0:
-                    self.resource.put(left_over)
-            else:
-                self.pending_reduction -= difference
+            balance = self.pending_reduction - difference
+            if balance < 0:
+                self.resource.put(-balance)
+            self.pending_reduction = max(0, balance)
 
+        # remove capcity by taking idle and adding to pending_reduction
         elif difference < 0:
-            if abs(difference) > self.resource.level:
-                left_over = abs(difference) - self.resource.level
-                if self.resource.level != 0:
-                    self.resource.get(self.resource.level)
-                self._reduce_capacity(left_over)
-            elif abs(difference) <= self.resource.level:
-                self.resource.get(abs(difference))
+            reduction = abs(difference)
+            available_capacity = min(reduction, self.resource.level)
+
+            if available_capacity:
+                self.resource.get(available_capacity)
+
+            if reduction > available_capacity:
+                self._reduce_capacity(reduction - available_capacity)
 
         self.current_capacity = new_capacity
 
