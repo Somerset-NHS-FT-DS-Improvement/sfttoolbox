@@ -100,17 +100,33 @@ class SimulationAnalyses:
             represent individual simulation replications.
         """
         if isinstance(self.sf, list):
+            minute_index = pd.Index(
+                range(math.ceil(self.final_time_mins) + 1),
+                name="Time",
+            )
+    
             dfs = []
+    
             for i, sf in enumerate(self.sf):
-                df = self._create_resource_dataframe_single_sim(sf.metrics[col], col)
-                df = (
-                    df.set_index("Time")
-                    .reindex(range(self.final_time_mins + 1))["cumsum"]
+                df = self._create_resource_dataframe_single_sim(
+                    sf.metrics[col],
+                    col,
+                ).set_index("Time")
+    
+                # Temporarily combine the event times and required sample times.
+                combined_index = df.index.union(minute_index).sort_values()
+    
+                sampled = (
+                    df["cumsum"]
+                    .reindex(combined_index)
                     .ffill()
+                    .reindex(minute_index)
                     .fillna(0)
-                    .to_frame(name=i)
+                    .rename(i)
                 )
-                dfs.append(df)
+    
+                dfs.append(sampled)
+    
             res_used_df = pd.concat(dfs, axis=1)
         else:
             res_used_df = self._create_resource_dataframe_single_sim(
@@ -179,6 +195,7 @@ class SimulationAnalyses:
                 dfs[0]
                 .quantile(0.5, axis=1)
                 .plot(
+                    drawstyle="steps-post",
                     figsize=(20, 10),
                     color=colors[0],
                     alpha=0.8,
@@ -192,11 +209,13 @@ class SimulationAnalyses:
                 y2=dfs[0].quantile(0.975, axis=1),
                 color=colors[0],
                 alpha=0.2,
+                step='post'
             )
 
             for i, df in enumerate(dfs[1:], 1):
                 df.quantile(0.5, axis=1).plot(
                     ax=ax,
+                    drawstyle="steps-post",
                     color=colors[i],
                     alpha=0.8,
                     linewidth=3,
@@ -208,6 +227,7 @@ class SimulationAnalyses:
                     y2=df.quantile(0.975, axis=1),
                     color=colors[i],
                     alpha=0.2,
+                    step='post'
                 )
 
         else:
