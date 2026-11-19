@@ -792,7 +792,7 @@ class ShiftCapacityPool(ResourcePool):
             if difference >= self.pending_reduction:
                 left_over = difference - self.pending_reduction
                 self.pending_reduction = 0
-                if difference - self.resource.level > 0:
+                if left_over > 0:
                     self.resource.put(left_over)
             else:
                 self.pending_reduction -= difference
